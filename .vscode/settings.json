@@ -1,0 +1,17 @@
+{
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "vector": "cpp",
+        "optional": "cpp",
+        "string_view": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "streambuf": "cpp",
+        "unordered_map": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp"
+    }
+}
