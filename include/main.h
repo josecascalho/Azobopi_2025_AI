@@ -3,7 +3,7 @@
 
 // debug setup
 //#define DEBUG_VAR
-//#define DEBUG_ACT
+#define DEBUG_ACT
 //#define DEBUG_FCT
 //#define DEBUG_STATE
 
@@ -146,8 +146,8 @@ int enc_dir_2 = 0;
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed
-int speedL = 100; // because azobopi floated to right side     
-int speedR = 57;
+int speedL = 50; // because azobopi floated to right side     
+int speedR = 50;
 
 // motor speed for turning -> set lower fixed speed for turning
 int turnspeedL = 60;
@@ -166,8 +166,11 @@ bool reset_time_wait = 1; // bool to reset waiting timer
 #define CURVE_CIRCUMFERENCE (3.14 * WHEELS_DISTANCE)
 
 // Encoders pins
+//left
 #define ENC1_A 34
 #define ENC1_B 35
+
+//right
 #define ENC2_A 36
 #define ENC2_B 39
 

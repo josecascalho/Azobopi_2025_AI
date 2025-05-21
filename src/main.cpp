@@ -395,29 +395,29 @@ void forward(void) // function to drive forwards
       (abs(encoder2_pos) < SETPOINT_RUN)) {
     startTimer();
     
-    Serial.println("enc moteur R : ");
-    Serial.println(abs(encoder1_pos));
-    Serial.println("enc moteur L : ");
-    Serial.println(abs(encoder2_pos));
-    Serial.println("encoder_dir R : ");
-    Serial.println(enc_dir_1);
-    Serial.println("encoder_dir L : ");
-    Serial.println(enc_dir_2);
+    //Serial.println("enc mo²teur R : ");
+    //Serial.println(abs(encoder1_pos));
+    //Serial.println("enc moteur L : ");
+    //Serial.println(abs(encoder2_pos));
+    //Serial.println("encoder_dir R : ");
+    //Serial.println(enc_dir_1);
+    //Serial.println("encoder_dir L : ");
+    //Serial.println(enc_dir_2);
 
     int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
     int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
-    MotorControl.motorReverse(0, vel);
-    MotorControl.motorReverse(1, ver);
+    MotorControl.motorReverse(0, speedL);
+    MotorControl.motorReverse(1, speedR);
 
-    if (counterPID > freq) {
-      portENTER_CRITICAL_ISR(&counterMux);
-      counterPID = 0;
-      portEXIT_CRITICAL_ISR(&counterMux);
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      pidleft.Compute();
-      pidright.Compute();
-    }
+    //if (counterPID > freq) {
+    //  portENTER_CRITICAL_ISR(&counterMux);
+    //  counterPID = 0;
+    //  portEXIT_CRITICAL_ISR(&counterMux);
+    //  enc_readL = encoder1_pos;
+    //  enc_readR = encoder2_pos;
+    //  pidleft.Compute();
+    //  pidright.Compute();
+    //}
   } else {
     stopTimer();
     time_now = millis();
