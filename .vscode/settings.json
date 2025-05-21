@@ -21,6 +21,7 @@
         "tuple": "cpp",
         "iosfwd": "cpp",
         "cmath": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "map": "cpp"
     }
 }

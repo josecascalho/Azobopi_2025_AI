@@ -255,7 +255,7 @@ void ESP32MotorControl::motorReverse(uint8_t motor, uint8_t speed)
 		mMotorSpeed[motor] = speed; // Save it
 		mMotorForward[motor] = false;
 
-		debug("Motor %u reverse speed %u", motor, speed);
+		//debug("Motor %u reverse speed %u", motor, speed);
 	}
 }
 

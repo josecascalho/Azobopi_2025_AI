@@ -3,9 +3,9 @@
 
 // debug setup
 //#define DEBUG_VAR
-#define DEBUG_ACT
+//#define DEBUG_ACT
 //#define DEBUG_FCT
-//#define DEBUG_STATE
+#define DEBUG_STATE
 
 #ifdef DEBUG_VAR
   #define DEBUG_PRINT_VAR(x) Serial.print(x)
@@ -138,16 +138,18 @@ volatile double encoder1_pos;
 volatile double encoder2_pos;
 byte encoder1_state, encoder2_state;
 int  encoder_table[] = { 0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0 };
+//int state_table[1000];
 int enc_dir_1 = 0;
 int enc_dir_2 = 0;
+int enc_count = 0;
 // Motors
 #include "ESP32MotorControl.h"
 // Initialize motors library
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed
-int speedL = 50; // because azobopi floated to right side     
-int speedR = 50;
+int speedL = 30; // because azobopi floated to right side     
+int speedR = 30;
 
 // motor speed for turning -> set lower fixed speed for turning
 int turnspeedL = 60;

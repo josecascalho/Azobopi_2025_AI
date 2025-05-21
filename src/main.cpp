@@ -11,20 +11,10 @@ float map_values(float x, float in_min, float in_max, float out_min, float out_m
     return (delta * rise) / run + out_min;
 }
 
-void Encoders_Interrupt(void)
+
+void IRAM_ATTR Encoders_Interrupt_2(void)
 {
   byte next_state, table_input;
-
-
-  // Encoder 1
-  next_state     = digitalRead(ENC1_A) << 1;
-  next_state    |= digitalRead(ENC1_B);
-  table_input    = (encoder1_state << 2) | next_state;
-  encoder1_pos  -= encoder_table[table_input];
-  enc_dir_1 = encoder_table[table_input];
-
-
-  encoder1_state = next_state;
 
   // Encoder 2
   next_state     = digitalRead(ENC2_A) << 1;
@@ -32,15 +22,46 @@ void Encoders_Interrupt(void)
   table_input    = (encoder2_state << 2) | next_state;
   encoder2_pos  += encoder_table[table_input];
   encoder2_state = next_state;
-  enc_dir_2 = encoder_table[table_input];
 
+  enc_dir_2 = encoder_table[table_input];
+  
   counterPID += 1;
+
+  //enc_count +=1;
+  //if(enc_count < 1000){
+  //  state_table[enc_count] = next_state;
+  //}
+  //else{
+  //  memset(state_table, 0, sizeof(state_table));
+  //}
+}
+
+void IRAM_ATTR Encoders_Interrupt(void)
+{
+  byte next_state, table_input;
+
+  // Encoder 1
+  next_state     = digitalRead(ENC1_A) << 1;
+  next_state    |= digitalRead(ENC1_B);
+  table_input    = (encoder1_state << 2) | next_state;
+
+  encoder1_pos  -= encoder_table[table_input];
+  enc_dir_1 = encoder_table[table_input];
+  encoder1_state = next_state;
+  
+  counterPID += 1;
+  enc_count +=1;
+  //if(enc_count < 1000){
+  //  state_table[enc_count] = next_state;
+  //}
+  //else{
+  //  memset(state_table, 0, sizeof(state_table));
+  //}
 }
 
 void IRAM_ATTR onTimer()
 {
   portENTER_CRITICAL_ISR(&timerMux);
-  Encoders_Interrupt();
   portEXIT_CRITICAL_ISR(&timerMux);
 }
 
@@ -110,6 +131,7 @@ void stopTimer()
     timer        = NULL;
     encoder1_pos = 0;
     encoder2_pos = 0;
+    Serial.println("timer stopped rencoder reseted");
   }
 }
 
@@ -398,17 +420,16 @@ void forward(void) // function to drive forwards
     //Serial.println("enc mo²teur R : ");
     //Serial.println(abs(encoder1_pos));
     //Serial.println("enc moteur L : ");
-    //Serial.println(abs(encoder2_pos));
-    //Serial.println("encoder_dir R : ");
-    //Serial.println(enc_dir_1);
-    //Serial.println("encoder_dir L : ");
-    //Serial.println(enc_dir_2);
-
+    Serial.println(encoder2_pos);
+    //Serial.println("enc interrupt count : ");
+    //Serial.println(enc_count);
+    //for(int i; i<1000; i++){
+    //  Serial.print(state_table[i]);
+    //}
     int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
     int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
-    MotorControl.motorReverse(0, speedL);
-    MotorControl.motorReverse(1, speedR);
-
+    MotorControl.motorReverse(0, vel);
+    MotorControl.motorReverse(1, ver);
     //if (counterPID > freq) {
     //  portENTER_CRITICAL_ISR(&counterMux);
     //  counterPID = 0;
@@ -741,6 +762,13 @@ void setup() // microcontroller setup runs once
   // Motor Pins 35 et 34 et VP et VN
   DEBUG_PRINT_ACT("CONFIG : 27, 14, 25, 26");
   MotorControl.attachMotors( 27, 14, 25, 26); //ROBOT José trocar 25 por 27
+
+  //interruption for encoders
+  attachInterrupt(ENC1_A, &Encoders_Interrupt, CHANGE );
+  attachInterrupt(ENC1_B, &Encoders_Interrupt, CHANGE );
+
+  attachInterrupt(ENC2_A, &Encoders_Interrupt_2, CHANGE );
+  attachInterrupt(ENC2_B, &Encoders_Interrupt_2, CHANGE );
 
   // Tuning Setup
   tuningSetupTurn();
