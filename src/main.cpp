@@ -14,29 +14,18 @@ float map_values(float x, float in_min, float in_max, float out_min, float out_m
 
 void IRAM_ATTR Encoders_Interrupt_2(void)
 {
+  
   byte next_state, table_input;
 
   // Encoder 2
   next_state     = digitalRead(ENC2_A) << 1;
   next_state    |= digitalRead(ENC2_B);
   table_input    = (encoder2_state << 2) | next_state;
-  encoder2_pos  += encoder_table[table_input];
-  if(encoder_table[table_input] != 0){
-    
-  }
-  encoder2_state = next_state;
-
   enc_dir_2 = encoder_table[table_input];
-  
-  counterPID += 1;
+  if(machine_state != STOP_ST){encoder2_pos  += encoder_table[table_input];}
 
-  //enc_count +=1;
-  //if(enc_count < 1000){
-  //  state_table[enc_count] = next_state;
-  //}
-  //else{
-  //  memset(state_table, 0, sizeof(state_table));
-  //}
+  encoder2_state = next_state;
+  counterPID += 1;
 }
 
 void IRAM_ATTR Encoders_Interrupt(void)
@@ -47,19 +36,11 @@ void IRAM_ATTR Encoders_Interrupt(void)
   next_state     = digitalRead(ENC1_A) << 1;
   next_state    |= digitalRead(ENC1_B);
   table_input    = (encoder1_state << 2) | next_state;
-
-  encoder1_pos  -= encoder_table[table_input];
   enc_dir_1 = encoder_table[table_input];
-  encoder1_state = next_state;
+  if(machine_state != STOP_ST){encoder1_pos  -= encoder_table[table_input];}
   
+  encoder1_state = next_state;
   counterPID += 1;
-  enc_count +=1;
-  //if(enc_count < 1000){
-  //  state_table[enc_count] = next_state;
-  //}
-  //else{
-  //  memset(state_table, 0, sizeof(state_table));
-  //}
 }
 
 void IRAM_ATTR onTimer()
@@ -96,6 +77,15 @@ void tuningSetupTurn()
  
   // Sets default value of SETPOINT TURN in the middle of the number of possible tuning setpoints
   SETPOINT_TURN = setpoint_values_turn[tune_counter_turn];
+}
+
+void print_values_for_plot()
+{
+    Serial.print(">encoder2_pos:");
+    Serial.print(encoder2_pos);
+    Serial.print(",");
+    Serial.print("encoder1_pos:");
+    Serial.println(encoder1_pos);
 }
 
 void tuningSetupMove()
@@ -167,6 +157,9 @@ void read_direction_buttons() // function to read direction buttons
       nr_comm++; //add 1 to the total number of movements
     }
     mov = 0; //reset mov to 0 
+    for(int i=0;i<20;i++){
+    DEBUG_PRINTLN_VAR(recorded_button[i]);
+  }
   }
   button_forwards.loop(); //read forwards button
 
@@ -179,6 +172,9 @@ void read_direction_buttons() // function to read direction buttons
       nr_comm++; //add 1 to the total number of movements
     }
     mov = 0; //reset mov to 0 
+    for(int i=0;i<20;i++){
+    DEBUG_PRINTLN_VAR(recorded_button[i]);
+  }
   }
   button_right.loop(); //read right button
 
@@ -192,6 +188,9 @@ void read_direction_buttons() // function to read direction buttons
     }
     mov = 0; //reset mov to 0
     button_stop.resetCount(); 
+    for(int i=0;i<20;i++){
+    DEBUG_PRINTLN_VAR(recorded_button[i]);
+  }
   }
   button_backwards.loop(); //read backwards button
 
@@ -203,7 +202,10 @@ void read_direction_buttons() // function to read direction buttons
       recorded_button[nr_comm] = mov; //write mov to array of recorded buttons(movements)
       nr_comm++; //add 1 to the total number of movements
     }
-    mov = 0; //reset mov to 0 
+    mov = 0; //reset mov to 0
+    for(int i=0;i<20;i++){
+    DEBUG_PRINTLN_VAR(recorded_button[i]);
+  } 
   }
 
   button_stop.loop(); //read backwards button
@@ -217,7 +219,12 @@ void read_direction_buttons() // function to read direction buttons
       nr_comm++; //add 1 to the total number of movements
     }
     mov = 0; //reset mov to 0 
+    for(int i=0;i<20;i++){
+    DEBUG_PRINTLN_VAR(recorded_button[i]);
   }
+  }
+  
+  
 } // read_cmd_buttons
 
 void init(void) // function to init the the robo
@@ -253,7 +260,6 @@ void readComm(void) // funciton to read movement commands
 {
   DEBUG_PRINTLN_FCT("exc readComm fct"); // debug print
   setLed(255, 255, 0);               // set LED to yellow
-
   if (nr_comm < MAX_NR_COMMANDS) { // it only keeps the first max_nr_commands...
     read_direction_buttons(); // call read dir func
   }
@@ -348,32 +354,34 @@ void turnRight(void) // function to turn right
 {
   DEBUG_PRINTLN_FCT("exc turnRight fct");
   DEBUG_PRINTLN_ACT("turn right");
+  print_values_for_plot();
   showBitmap(image_data_EYES_LEFT);
   if ((abs(encoder1_pos) < SETPOINT_TURN) &&
       (abs(encoder2_pos < SETPOINT_TURN)))
   {
-    startTimer();
-
+    //startTimer();
     int vel = kspeed * (turnspeedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run makes sure robo turns accurate
     int ver = kspeed * (turnspeedR + val_outputR) - setpoint_straight_run;
-    MotorControl.motorReverse(0, vel);
-    MotorControl.motorForward(1, ver);
+    MotorControl.motorReverse(0, turnspeedL);
+    MotorControl.motorForward(1, turnspeedR);
 
-    if (counterPID > 50) {
-      portENTER_CRITICAL_ISR(&counterMux);
-      counterPID = 0;
-      portEXIT_CRITICAL_ISR(&counterMux);
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      pidleft.Compute();
-      pidright.Compute();
-    }
+    //if (counterPID > 50) {
+    //  portENTER_CRITICAL_ISR(&counterMux);
+    //  counterPID = 0;
+    //  portEXIT_CRITICAL_ISR(&counterMux);
+    //  enc_readL = encoder1_pos;
+    //  enc_readR = encoder2_pos;
+    //  pidleft.Compute();
+    //  pidright.Compute();
+    //}
   } else {
-    stopTimer();
+    //stopTimer();
     time_now = millis();
 
     stop_next_state = EXEC_ST;
     machine_state   = STOP_ST;
+    encoder1_pos = 0;
+    encoder2_pos = 0;
   }
   stopExec(); // stop current execution
 }
@@ -382,11 +390,12 @@ void turnLeft(void) // function to turn left
 {
   DEBUG_PRINTLN_FCT("exc turnLeft fct");
   DEBUG_PRINTLN_ACT("turn left");
+  print_values_for_plot();
   showBitmap(image_data_EYES_RIGHT);
   if ((abs(encoder1_pos) < SETPOINT_TURN) &&
       (abs(encoder2_pos < SETPOINT_TURN)))
   {
-    startTimer();
+    //startTimer();
     int vel = kspeed * (turnspeedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run makes sure robo turns accurate
     int ver = kspeed * (turnspeedR + val_outputR) - setpoint_straight_run;
     MotorControl.motorForward(0, vel);
@@ -402,11 +411,13 @@ void turnLeft(void) // function to turn left
       pidright.Compute();
     }
   } else {
-    stopTimer();
+    //stopTimer();
     time_now = millis();
 
     stop_next_state = EXEC_ST;
     machine_state   = STOP_ST;
+    encoder1_pos = 0;
+    encoder2_pos = 0;
   }
   stopExec(); // stop current execution
 }
@@ -415,24 +426,11 @@ void forward(void) // function to drive forwards
 {
   DEBUG_PRINTLN_FCT("exc forward fct");
   DEBUG_PRINTLN_ACT("drive forward");
+  print_values_for_plot();
   showBitmap(image_data_EYES_DOWN);
   if ((abs(encoder1_pos) < SETPOINT_RUN) &&
       (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
-    
-    //Serial.println("enc mo²teur R : ");
-    //Serial.println(abs(encoder1_pos));
-    //Serial.println("enc moteur L : ");
-    Serial.print(">encoder2_pos:");
-    Serial.print(encoder2_pos);
-    Serial.print(",");
-    Serial.print("encoder1_pos:");
-    Serial.println(encoder1_pos);
-    //Serial.println("enc interrupt count : ");
-    //Serial.println(enc_count);
-    //for(int i; i<1000; i++){
-    //  Serial.print(state_table[i]);
-    //}
+    //startTimer();
     int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
     int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
     MotorControl.motorReverse(0, vel);
@@ -447,11 +445,13 @@ void forward(void) // function to drive forwards
       pidright.Compute();
     }
   } else {
-    stopTimer();
+    //stopTimer();
     time_now = millis();
 
     stop_next_state = EXEC_ST;
     machine_state   = STOP_ST;
+    encoder1_pos = 0;
+    encoder2_pos = 0;
   }
   stopExec(); // stop current execution
 }
@@ -460,11 +460,10 @@ void back(void) // function to drive backwards
 {
   DEBUG_PRINTLN_FCT("exc back fct");
   DEBUG_PRINTLN_ACT("drive back");
+  print_values_for_plot();
   showBitmap(image_data_EYES_UP);
   if ((abs(encoder1_pos) < SETPOINT_RUN) &&
       (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
-
     int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
     int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
     MotorControl.motorForward(0, vel);
@@ -492,9 +491,10 @@ void back(void) // function to drive backwards
        * DEBUG_PRINTLN(ver);*/
     }
   } else {
-    stopTimer();
+    //stopTimer();
     time_now = millis();
-
+    encoder1_pos = 0;
+    encoder2_pos = 0;
     stop_next_state = EXEC_ST;
     machine_state   = STOP_ST;
   }
@@ -652,11 +652,11 @@ void fsm(void) // finite state machine
   button_stop.loop();
   button_stop_count = button_stop.getCount();
 
-  DEBUG_PRINT_VAR("button_command_count: "); // debug print
-  DEBUG_PRINTLN_VAR(button_command_count); // debug print
+  //DEBUG_PRINT_VAR("button_command_count: "); // debug print
+  //DEBUG_PRINTLN_VAR(button_command_count); // debug print
   
-  DEBUG_PRINT_VAR("nr_comm: "); // debug print
-  DEBUG_PRINTLN_VAR(nr_comm); // debug print
+  //DEBUG_PRINT_VAR("nr_comm: "); // debug print
+  //DEBUG_PRINTLN_VAR(nr_comm); // debug print
   
   switch (machine_state) { // switch to current machine state
   case INIT_ST: // execute init state

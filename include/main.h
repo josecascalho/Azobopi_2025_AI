@@ -2,8 +2,8 @@
 #define main_h // ifndef main_h 
 
 // debug setup
-//#define DEBUG_VAR
-//#define DEBUG_ACT
+#define DEBUG_VAR
+#define DEBUG_ACT
 //#define DEBUG_FCT
 #define DEBUG_STATE
 
@@ -31,7 +31,7 @@
 #endif
 
 #ifdef DEBUG_STATE
-  #define DEBUG_PRINTLN_STATE(x) Serial.print("Machine State: "); Serial.println(x)
+  #define DEBUG_PRINTLN_STATE(x) Serial.print(">Machine State:"); Serial.println(x)
 #else
   #define DEBUG_PRINTLN_STATE(x)
 #endif // debug setup
@@ -148,7 +148,7 @@ int enc_count = 0;
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed
-int speedL = 50; // because azobopi floated to right side     
+int speedL = 55; // because azobopi floated to right side     
 int speedR = 30;
 
 // motor speed for turning -> set lower fixed speed for turning
