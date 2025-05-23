@@ -148,7 +148,7 @@ int enc_count = 0;
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed
-int speedL = 30; // because azobopi floated to right side     
+int speedL = 50; // because azobopi floated to right side     
 int speedR = 30;
 
 // motor speed for turning -> set lower fixed speed for turning
@@ -169,8 +169,8 @@ bool reset_time_wait = 1; // bool to reset waiting timer
 
 // Encoders pins
 //left
-#define ENC1_A 34
-#define ENC1_B 35
+#define ENC1_A 35
+#define ENC1_B 34
 
 //right
 #define ENC2_A 36
@@ -206,7 +206,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #include "displayuaclogo.h"
 #include "smileys.h"
-#endif // ifndef main_h
+#endif 
 
 // Speaker setup
 

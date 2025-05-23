@@ -21,6 +21,9 @@ void IRAM_ATTR Encoders_Interrupt_2(void)
   next_state    |= digitalRead(ENC2_B);
   table_input    = (encoder2_state << 2) | next_state;
   encoder2_pos  += encoder_table[table_input];
+  if(encoder_table[table_input] != 0){
+    
+  }
   encoder2_state = next_state;
 
   enc_dir_2 = encoder_table[table_input];
@@ -420,7 +423,11 @@ void forward(void) // function to drive forwards
     //Serial.println("enc mo²teur R : ");
     //Serial.println(abs(encoder1_pos));
     //Serial.println("enc moteur L : ");
-    Serial.println(encoder2_pos);
+    Serial.print(">encoder2_pos:");
+    Serial.print(encoder2_pos);
+    Serial.print(",");
+    Serial.print("encoder1_pos:");
+    Serial.println(encoder1_pos);
     //Serial.println("enc interrupt count : ");
     //Serial.println(enc_count);
     //for(int i; i<1000; i++){
@@ -430,15 +437,15 @@ void forward(void) // function to drive forwards
     int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
     MotorControl.motorReverse(0, vel);
     MotorControl.motorReverse(1, ver);
-    //if (counterPID > freq) {
-    //  portENTER_CRITICAL_ISR(&counterMux);
-    //  counterPID = 0;
-    //  portEXIT_CRITICAL_ISR(&counterMux);
-    //  enc_readL = encoder1_pos;
-    //  enc_readR = encoder2_pos;
-    //  pidleft.Compute();
-    //  pidright.Compute();
-    //}
+    if (counterPID > freq) {
+      portENTER_CRITICAL_ISR(&counterMux);
+      counterPID = 0;
+      portEXIT_CRITICAL_ISR(&counterMux);
+      enc_readL = encoder1_pos;
+      enc_readR = encoder2_pos;
+      pidleft.Compute();
+      pidright.Compute();
+    }
   } else {
     stopTimer();
     time_now = millis();

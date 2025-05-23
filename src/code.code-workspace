@@ -1,0 +1,37 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "test motor",
+			"path": "../../../../Documents/PlatformIO/Projects/test motor"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"deque": "cpp",
+			"string": "cpp",
+			"vector": "cpp",
+			"optional": "cpp",
+			"string_view": "cpp",
+			"fstream": "cpp",
+			"istream": "cpp",
+			"streambuf": "cpp",
+			"unordered_map": "cpp",
+			"ostream": "cpp",
+			"sstream": "cpp",
+			"unordered_set": "cpp",
+			"algorithm": "cpp",
+			"functional": "cpp",
+			"iterator": "cpp",
+			"memory_resource": "cpp",
+			"tuple": "cpp",
+			"iosfwd": "cpp",
+			"cmath": "cpp",
+			"utility": "cpp",
+			"map": "cpp"
+		}
+	}
+}
