@@ -1,4 +1,5 @@
 #include "main.h"
+void readcamera();
 
 float map_values(float x, float in_min, float in_max, float out_min, float out_max) {
     const float run = in_max - in_min;

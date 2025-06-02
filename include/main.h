@@ -60,6 +60,14 @@ ezButton button_stop (4);
 // camera
 #include "HUSKYLENS.h"
 #include "Wire.h"
+HUSKYLENS huskylens;
+bool objectDetected = false;
+int objectID = -1;
+int objectX = 0;
+int objectY = 0;
+int objectWidth = 0;
+int objectHeight = 0;
+
 
 // States
 #define VOID_ST 0

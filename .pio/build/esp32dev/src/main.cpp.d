@@ -134,10 +134,11 @@
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/cores/esp32/io_pin_remap.h \
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  .pio/libdeps/esp32dev/Adafruit\ NeoPixel/Adafruit_NeoPixel.h \
- .pio/libdeps/esp32dev/ezButton/src/ezButton.h lib/camera/HUSKYLENS.h \
+ .pio/libdeps/esp32dev/ezButton/src/ezButton.h \
+ lib/huskylens/src/HUSKYLENS.h \
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h \
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal.h \
- lib/camera/HuskyLensProtocolCore.h lib/PID_simple/PID_simple.h \
+ lib/huskylens/src/HuskyLensProtocolCore.h lib/PID_simple/PID_simple.h \
  .pio/libdeps/esp32dev/ESP32MotorControl/ESP32MotorControl.h \
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src/SPI.h \
  C:/Users/Bastien/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-spi.h \
