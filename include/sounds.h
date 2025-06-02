@@ -113,3 +113,21 @@ void finish_melody(){
   delay(250);
   tone(PIN_SPEAKER,NOTE_F5,500);
 }
+
+void victory_melody() {
+  tone(PIN_SPEAKER, NOTE_G4, 150); 
+  delay(150);
+  tone(PIN_SPEAKER, NOTE_A4, 150); 
+  delay(150);
+  tone(PIN_SPEAKER, NOTE_B4, 150); 
+  delay(150);
+  tone(PIN_SPEAKER, NOTE_G5, 300); 
+}
+
+void failure_melody() {
+  tone(PIN_SPEAKER, NOTE_E4, 250); 
+  delay(250);
+  tone(PIN_SPEAKER, NOTE_C4, 250); 
+  delay(250);
+  tone(PIN_SPEAKER, NOTE_A3, 500);
+}

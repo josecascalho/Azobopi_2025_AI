@@ -296,7 +296,6 @@ void startExec(void) // function to start execution of commands
   }
 
   if (button_forwards.isPressed()) { // check if button forward is pressed
-    readcamera();
     comm_index         = nr_comm; // set comm_index to number of commands
     on_execute_comm_st = 1; // executed at least once ... needed???
     machine_state      = EXEC_ST; // set machine state to exectute_state
@@ -732,10 +731,9 @@ void show_state(void){ // show state function is used for debuging
 
 void readcamera() {
   objectDetected = false;
-  Serial.println("request");
   if (huskylens.request()) {
-    Serial.println("request ok");
     if (huskylens.available()) {
+      victory_melody();
       HUSKYLENSResult result = huskylens.read();
 
       objectDetected = true;
@@ -751,6 +749,10 @@ void readcamera() {
       Serial.print(" | y: "); Serial.print(objectY);
       Serial.print(" | W: "); Serial.print(objectWidth);
       Serial.print(" | H: "); Serial.println(objectHeight);
+    }
+    else {
+      failure_melody();
+      Serial.println("object isn't detect");
     }
   }
 }
