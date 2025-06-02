@@ -296,6 +296,7 @@ void startExec(void) // function to start execution of commands
   }
 
   if (button_forwards.isPressed()) { // check if button forward is pressed
+    readcamera();
     comm_index         = nr_comm; // set comm_index to number of commands
     on_execute_comm_st = 1; // executed at least once ... needed???
     machine_state      = EXEC_ST; // set machine state to exectute_state
@@ -327,7 +328,6 @@ void exec(void) // function to execut the movement commands
 
   if (comm_index >= 0) { // avoid getting nonsense data
     setLed(255, 51, 255);               // set led to pink
-    readcamera();
     int action = recorded_button[(nr_comm - 1) - comm_index];  // get current action
     if (action == FORWARD) {  //set state to execute movement action
       machine_state = FORWARD_ST; 
@@ -340,10 +340,10 @@ void exec(void) // function to execut the movement commands
       } else if (action == WAIT) {
       machine_state = WAIT_ST;
     }
-    readcamera();
   }
 
   if (comm_index < 0) {             // no more commands
+    readcamera();
     finish_melody();
     button_forwards.loop();         
 
@@ -732,8 +732,9 @@ void show_state(void){ // show state function is used for debuging
 
 void readcamera() {
   objectDetected = false;
-
+  Serial.println("request");
   if (huskylens.request()) {
+    Serial.println("request ok");
     if (huskylens.available()) {
       HUSKYLENSResult result = huskylens.read();
 
