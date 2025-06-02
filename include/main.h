@@ -57,6 +57,10 @@ ezButton button_forwards(16);
 ezButton button_right(18);
 ezButton button_stop (4);
 
+// camera
+#include "HUSKYLENS.h"
+#include "Wire.h"
+
 // States
 #define VOID_ST 0
 #define INIT_ST 1

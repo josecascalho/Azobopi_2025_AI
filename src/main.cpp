@@ -326,6 +326,7 @@ void exec(void) // function to execut the movement commands
 
   if (comm_index >= 0) { // avoid getting nonsense data
     setLed(255, 51, 255);               // set led to pink
+    readcamera();
     int action = recorded_button[(nr_comm - 1) - comm_index];  // get current action
     if (action == FORWARD) {  //set state to execute movement action
       machine_state = FORWARD_ST; 
@@ -338,6 +339,7 @@ void exec(void) // function to execut the movement commands
       } else if (action == WAIT) {
       machine_state = WAIT_ST;
     }
+    readcamera();
   }
 
   if (comm_index < 0) {             // no more commands
@@ -727,6 +729,32 @@ void show_state(void){ // show state function is used for debuging
   }
 } // show state
 
+void readcamera() {
+  objectDetected = false;
+
+  if (huskylens.request()) {
+    if (huskylens.available()) {
+      HUSKYLENSResult result = huskylens.read();
+
+      objectDetected = true;
+      objectID = result.ID;
+      objectX = result.xCenter;
+      objectY = result.yCenter;
+      objectWidth = result.width;
+      objectHeight = result.height;
+
+      // Debug
+      Serial.print("ID: "); Serial.print(objectID);
+      Serial.print(" | x: "); Serial.print(objectX);
+      Serial.print(" | y: "); Serial.print(objectY);
+      Serial.print(" | W: "); Serial.print(objectWidth);
+      Serial.print(" | H: "); Serial.println(objectHeight);
+    }
+  }
+}
+
+
+
 void setup() // microcontroller setup runs once
 {
   Serial.begin(9600); // setup serial monitor
@@ -782,6 +810,13 @@ void setup() // microcontroller setup runs once
   tuningSetupMove();
 
   machine_state = INIT_ST; // set machine to init state
+
+  Wire.begin();
+  if (!huskylens.begin(Wire)) {
+    Serial.println("camera isn't detect !");
+  } else {
+    Serial.println(" camera is detect !");
+  }
 }
 
 void loop() // microcontroller loop function 
