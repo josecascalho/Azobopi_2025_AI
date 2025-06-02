@@ -352,16 +352,12 @@ void exec(void) // function to execut the movement commands
     int action = recorded_button[(nr_comm - 1) - comm_index];  // get current action
     if (action == FORWARD) {  //set state to execute movement action
       machine_state = FORWARD_ST; 
-      startTimer();
     } else if (action == BACKWARD) {
       machine_state = BACK_ST;
-      startTimer();
     } else if (action == TURN_LEFT) {
       machine_state = TURN_LEFT_ST;
-      startTimer();
     } else if (action == TURN_RIGHT) {
       machine_state = TURN_RIGHT_ST;
-      startTimer();
       } else if (action == WAIT) {
       machine_state = WAIT_ST;
     }

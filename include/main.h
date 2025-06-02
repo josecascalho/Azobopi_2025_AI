@@ -121,12 +121,12 @@ double k_delta = 0.7;
 double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
 double delta_fix = 0;
-double kp_wheel = 0.9, ki_wheel = 0.25, kd_wheel = 0.03;
+double kp_wheel = 0.8, ki_wheel = 0.05, kd_wheel = 0.15;
 double delta_goal = 1;
 double kp = 0.8, ki =0.001, kd = 0.03; // changes in ki & kd resulted in strange behaviour
 int kspeed = 1;
 volatile int counterPID;
-int freq = 20000;
+int freq = 500;
 int motor_command_count = 0;
 double value_fix = wheel_balance;
 
