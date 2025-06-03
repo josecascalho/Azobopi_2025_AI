@@ -11,13 +11,14 @@ public:
       double,
       double);
 
-  bool   Compute();
+  bool Compute();
+  void Reset();
   double GetP();
   double GetI();
   double GetD();
 
 private:
-
+  double accumulated_integral;
   double *_setpoint;
   double *_encread;
   double *_output;

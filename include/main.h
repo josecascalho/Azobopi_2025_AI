@@ -31,7 +31,7 @@
 #endif
 
 #ifdef DEBUG_STATE
-  #define DEBUG_PRINTLN_STATE(x) Serial.print(">Machine State:"); Serial.println(x)
+  #define DEBUG_PRINTLN_STATE(x) Serial.print(">Machine State: "); Serial.println(x)
 #else
   #define DEBUG_PRINTLN_STATE(x)
 #endif // debug setup
@@ -110,6 +110,10 @@ int machine_state;
 int last_machine_state;
 int stop_next_state;
 
+// SetPoints for PID
+#define SETPOINT_RUN 10000 // to be replaced as integers 
+
+
 // PID
 #include "PID_simple.h"
 
@@ -119,11 +123,24 @@ double val_outputL;
 double val_outputR;
 double enc_readL;
 double enc_readR;
-double Setpoint;
-double kp = 0, ki = 0, kd = 0; // changes in ki & kd resulted in strange behaviour
-int    kspeed = 1;
+double measurment_time;
+double last_time_now = 0;
+double last_encL, last_encR;
+double Setpoint = SETPOINT_RUN;
+double delta_wheel = 1;
+double wheel_balance = 1;
+double k_delta = 0.7;
+double computed_speedR, computed_speedL;
+double last_speedL, last_speedR;
+double delta_fix = 0;
+double kp_wheel = 1.5, ki_wheel = 0.1, kd_wheel = 0.05;
+double delta_goal = 1;
+double kp = 0.8, ki =0.001, kd = 0.03; // changes in ki & kd resulted in strange behaviour
+int kspeed = 1;
 volatile int counterPID;
 int freq = 20000;
+int motor_command_count = 0;
+double value_fix = wheel_balance;
 
 // tune turn movement
 #define num_setpoint_values_turn 7 // number of possible tuning setpoints in equivalent distances
@@ -142,12 +159,14 @@ int tune_counter_move;
 // initial straight run
 float setpoint_straight_run;     // increase to go right 
 
-// SetPoints for PID
-#define SETPOINT_RUN 3900 // to be replaced as integers 
+
 
 // Encoders Interrupt function variables and table
 volatile double encoder1_pos;
 volatile double encoder2_pos;
+volatile double enc1_last = 0;
+volatile double enc2_last = 0;
+
 byte encoder1_state, encoder2_state;
 int  encoder_table[] = { 0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0 };
 //int state_table[1000];
@@ -160,8 +179,9 @@ int enc_count = 0;
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed
-int speedL = 55; // because azobopi floated to right side     
-int speedR = 30;
+int default_speedL = 50; // because azobopi floated to right side     
+int default_speedR = 50;
+int speedL, speedR;
 
 // motor speed for turning -> set lower fixed speed for turning
 int turnspeedL = 60;
@@ -196,7 +216,7 @@ portMUX_TYPE counterMux = portMUX_INITIALIZER_UNLOCKED;
 // Initialize PID control for each motor
 PID pidleft(&Setpoint, &enc_readL, &val_outputL, kp, ki, kd);
 PID pidright(&Setpoint, &enc_readR, &val_outputR, kp, ki, kd);
-
+PID pid_delta(&delta_goal, &delta_wheel, &delta_fix, kp_wheel, ki_wheel, kd_wheel);
 // OLED DISPLAY SSD1306
 
 #include <SPI.h> // inlucde libraries for use of OLED
