@@ -353,12 +353,16 @@ void exec(void) // function to execut the movement commands
     int action = recorded_button[(nr_comm - 1) - comm_index];  // get current action
     if (action == FORWARD) {  //set state to execute movement action
       machine_state = FORWARD_ST; 
+      startTimer();
     } else if (action == BACKWARD) {
       machine_state = BACK_ST;
+      startTimer();
     } else if (action == TURN_LEFT) {
       machine_state = TURN_LEFT_ST;
+      startTimer();
     } else if (action == TURN_RIGHT) {
       machine_state = TURN_RIGHT_ST;
+      startTimer();
       } else if (action == WAIT) {
       machine_state = WAIT_ST;
     }
@@ -467,12 +471,13 @@ void forward(void) // function to drive forwards
   
   showBitmap(image_data_EYES_DOWN);
   
-  value_fix = wheel_balance; //initialisation de labalance
+  value_fix = wheel_balance; //initialisation de la balance
   if (motor_command_count > 0){
     //calcul de la vitesse de l'encodeur
       time_now = millis();
       measurment_time = time_now - last_time_now;
-      last_time_now = time_now;
+      last_time_now = time_now;     
+
       enc_readL = encoder1_pos;
       enc_readR = encoder2_pos;
       computed_speedR = (encoder1_pos-enc1_last)/measurment_time;
@@ -489,8 +494,8 @@ void forward(void) // function to drive forwards
       portENTER_CRITICAL_ISR(&counterMux);
       counterPID = 0;
       portEXIT_CRITICAL_ISR(&counterMux);
-      pidleft.Compute();
-      pidright.Compute(); 
+      //pidleft.Compute();
+      //pidright.Compute(); 
       pid_delta.Compute();
     }
   }
@@ -499,8 +504,8 @@ void forward(void) // function to drive forwards
     last_speedR = default_speedL;
   }
   
-  int vel = kspeed * (last_speedL + val_outputL); // setpoint_straight_run -> make sure robo goes straight
-  int ver = kspeed * (last_speedR + val_outputR);
+  //int vel = kspeed * (last_speedL + val_outputL); // setpoint_straight_run -> make sure robo goes straight
+  //int ver = kspeed * (last_speedR + val_outputR);
   
   double val_output_delta = constrain(delta_fix, -0.25, 0.25);
   delta_fix = val_output_delta;
@@ -508,24 +513,21 @@ void forward(void) // function to drive forwards
   
   value_fix = constrain(value_fix, 0.7, 1.3);
   
-  speedR = ver*value_fix;
-  speedL = vel/value_fix;
+  speedR = speedR*value_fix;
+  speedL = speedL/value_fix;
   
   if(speedL>255){speedL=255;}
   if(speedR>255){speedR=255;}
 
-  MotorControl.motorReverse(0, speedL);
-  MotorControl.motorReverse(1, speedR);
-
-  last_speedL = speedL;
-  last_speedR = speedR;
+  MotorControl.motorReverse(0, speedR);
+  MotorControl.motorReverse(1, speedL);
   
   motor_command_count ++;
 
   print_values_for_plot();
   if ((abs(encoder1_pos) < SETPOINT_RUN) &&
       (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
+    
     //Serial.print(">vel:");
     //Serial.print(vel);
     //Serial.print(",ver:");
@@ -540,6 +542,8 @@ void forward(void) // function to drive forwards
     last_time_now = 0;
     enc1_last = 0;
     enc2_last = 0;
+    speedL = default_speedL;
+    speedR =  default_speedR;
     encoder1_pos = 0;
     encoder2_pos = 0;
     motor_command_count = 0;
