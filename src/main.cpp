@@ -343,7 +343,6 @@ void exec(void) // function to execut the movement commands
 
   if (comm_index < 0) {             // no more commands
     readcamera();
-    finish_melody();
     button_forwards.loop();         
 
     if (button_forwards.isReleased()) { // wait till button releases state
