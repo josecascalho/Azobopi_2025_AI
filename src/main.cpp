@@ -108,7 +108,11 @@ void print_values_for_plot()
     Serial.print(",Kd:");
     Serial.print(pid_delta.GetD());
     Serial.print(",value_fix:");
-    Serial.println(value_fix);
+    Serial.print(value_fix);
+    Serial.print(",val_outputL:");
+    Serial.print(val_outputL);
+    Serial.print(",val_outputR:");
+    Serial.println(val_outputR);
 }
 
 void tuningSetupMove()
@@ -486,14 +490,14 @@ void turnLeft(void) // function to turn left
 
       enc_readL = abs(encoder1_pos);
       enc_readR = abs(encoder2_pos);
-      computed_speedR = (abs(encoder1_pos)-abs(enc1_last))/measurment_time;
-      computed_speedL = (abs(encoder2_pos)-abs(enc2_last))/measurment_time;
+      computed_speedR = (enc_readL-enc1_last)/measurment_time;
+      computed_speedL = (enc_readR-enc2_last)/measurment_time;
       
-      enc1_last = encoder1_pos;
-      enc2_last = encoder2_pos;
+      enc1_last = enc_readL;
+      enc2_last = enc_readR;
 
       if (computed_speedL != 0) {
-        delta_wheel = abs(computed_speedR / computed_speedL);
+        delta_wheel = enc_readL / enc_readR;
         if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
         delta_wheel = constrain(delta_wheel, 0.2, 5.0);
       } else {
@@ -503,14 +507,15 @@ void turnLeft(void) // function to turn left
       portENTER_CRITICAL_ISR(&counterMux);
       counterPID = 0;
       portEXIT_CRITICAL_ISR(&counterMux);
-      //pidleft.Compute();
-      //pidright.Compute(); 
+      pidleft.Compute();
+      pidright.Compute(); 
       pid_delta.Compute();
     }
   }
   else{
+    Setpoint = SETPOINT_TURN;
     last_speedL = default_speedL;
-    last_speedR = default_speedL;
+    last_speedR = default_speedR;
   }
   
   //int vel = kspeed * (last_speedL + val_outputL); // setpoint_straight_run -> make sure robo goes straight
@@ -522,8 +527,8 @@ void turnLeft(void) // function to turn left
   
   value_fix = constrain(value_fix, 0.7, 1.3);
   
-  speedR = speedR*value_fix;
-  speedL = speedL/value_fix;
+  speedR = (speedR);
+  speedL = (speedL);
   
   if(speedL>255){speedL=255;}
   if(speedR>255){speedR=255;}
@@ -563,6 +568,9 @@ void turnLeft(void) // function to turn left
     stopTimer();
     time_now = millis();
     pid_delta.Reset();
+    pid_distance.Reset();
+    pidleft.Reset();
+    pidright.Reset();
   }
   stopExec(); // stop current execution
 }
