@@ -36,6 +36,51 @@
   #define DEBUG_PRINTLN_STATE(x)
 #endif // debug setup
 
+//pour la gestion du webserver
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
+
+const char* ssid = "Partage_julien";
+const char* password = "poooorus15";
+
+AsyncWebServer server(80);
+WebSocketsServer webSocket(81);
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Réglage PID</title>
+</head>
+<body>
+  <h2>Réglage des paramètres PID</h2>
+  <label>Kp: <input type="number" id="kp" step="0.1" value="1.0"></label><br>
+  <label>Ki: <input type="number" id="ki" step="0.1" value="0.5"></label><br>
+  <label>Kd: <input type="number" id="kd" step="0.1" value="0.1"></label><br><br>
+  <button onclick="sendPID()">Envoyer</button>
+  <p id="status">En attente...</p>
+
+<script>
+  var ws = new WebSocket("ws://" + location.hostname + ":81/");
+  ws.onmessage = function(event) {
+    document.getElementById("status").innerText = "Réponse: " + event.data;
+  };
+
+  function sendPID() {
+    var kp = parseFloat(document.getElementById("kp").value);
+    var ki = parseFloat(document.getElementById("ki").value);
+    var kd = parseFloat(document.getElementById("kd").value);
+    var msg = JSON.stringify({ kp: kp, ki: ki, kd: kd });
+    ws.send(msg);
+  }
+</script>
+</body>
+</html>
+)rawliteral";
+
+
 // include software header files
 #include <Arduino.h>
 
@@ -158,8 +203,6 @@ float setpoint_move_max = 2.00;
 int tune_counter_move;
 // initial straight run
 float setpoint_straight_run;     // increase to go right 
-
-
 
 // Encoders Interrupt function variables and table
 volatile double encoder1_pos;

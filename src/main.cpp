@@ -1,6 +1,48 @@
 #include "main.h"
 void readcamera();
 
+
+void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
+  if (type == WStype_TEXT) {
+    String msg = String((char*)payload);
+    Serial.println("Message reçu : " + msg);
+
+    // Analyse JSON basique (sans lib JSON pour économiser la mémoire)
+    if (msg.indexOf("kp") >= 0) {
+      int kp_start = msg.indexOf("kp") + 4;
+      int kp_end = msg.indexOf(",", kp_start);
+      int ki_start = msg.indexOf("ki") + 4;
+      int ki_end = msg.indexOf(",", ki_start);
+      int kd_start = msg.indexOf("kd") + 4;
+      int kd_end = msg.indexOf("}", kd_start);
+
+      kp = msg.substring(kp_start, kp_end).toFloat();
+      ki = msg.substring(ki_start, ki_end).toFloat();
+      kd = msg.substring(kd_start, kd_end).toFloat();
+
+      Serial.printf("MàJ PID: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
+      webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
+    }
+  }
+}
+
+void StartWebServer(void)
+{
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500); Serial.print(".");
+  }
+  Serial.println("Connecté à l'adresse IP : " + WiFi.localIP().toString());
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", index_html);
+  });
+  server.begin();
+
+  webSocket.begin();
+  webSocket.onEvent(handleWebSocket);
+}
+
 float map_values(float x, float in_min, float in_max, float out_min, float out_max) {
     const float run = in_max - in_min;
     if(run == 0){
@@ -1076,11 +1118,13 @@ void setup() // microcontroller setup runs once
   } else {
     Serial.println(" camera is detect !");
   }
+  StartWebServer();
 }
 
 void loop() // microcontroller loop function 
 { 
   DEBUG_PRINTLN_FCT("exc microcontoller loop fct"); // debug print
   fsm(); // execute finite state machine
+  webSocket.loop();
   show_state(); // execute show state fct for debugging
 }
