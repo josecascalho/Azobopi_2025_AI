@@ -321,7 +321,6 @@ void startExec(void) // function to start execution of commands
     comm_index         = nr_comm; // set comm_index to number of commands
     on_execute_comm_st = 1; // executed at least once ... needed???
     machine_state      = EXEC_ST; // set machine state to exectute_state
-    startTimer();
   }
 }
 
@@ -351,6 +350,7 @@ void exec(void) // function to execut the movement commands
   if (comm_index >= 0) { // avoid getting nonsense data
     setLed(255, 51, 255);               // set led to pink
     int action = recorded_button[(nr_comm - 1) - comm_index];  // get current action
+    startTimer();
     if (action == FORWARD) {  //set state to execute movement action
       machine_state = FORWARD_ST; 
     } else if (action == BACKWARD) {
@@ -362,6 +362,7 @@ void exec(void) // function to execut the movement commands
       } else if (action == WAIT) {
       machine_state = WAIT_ST;
     }
+    
   }
 
   if (comm_index < 0) {             // no more commands
@@ -379,110 +380,27 @@ void turnRight(void) // function to turn right
   DEBUG_PRINTLN_FCT("exc turnRight fct");
   DEBUG_PRINTLN_ACT("turn right");
   print_values_for_plot();
-  showBitmap(image_data_EYES_DOWN);
-  if ((abs(encoder1_pos) < SETPOINT_RUN) &&
-      (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
-    int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
-    int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
-    Serial.print(">vel:");
-    Serial.print(vel);
-    Serial.print(",ver:");
-    Serial.println(ver);
-    
-    MotorControl.motorReverse(0, vel);
-    MotorControl.motorForward(1, ver);
-
-    if (counterPID > freq) {
-      portENTER_CRITICAL_ISR(&counterMux);
-      counterPID = 0;
-      portEXIT_CRITICAL_ISR(&counterMux);
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      pidleft.Compute();
-      pidright.Compute();
-    }
-  } else {
-    val_outputR=0;
-    val_outputL=0;
-    stopTimer();
-    time_now = millis();
-
-    stop_next_state = EXEC_ST;
-    machine_state   = STOP_ST;
-    encoder1_pos = 0;
-    encoder2_pos = 0;
-
-  }
-  stopExec(); // stop current execution
-}
-
-void turnLeft(void) // function to turn left
-{
-  DEBUG_PRINTLN_FCT("exc turnLeft fct");
-  DEBUG_PRINTLN_ACT("turn left");
-  print_values_for_plot();
-  showBitmap(image_data_EYES_DOWN);
-  if ((abs(encoder1_pos) < SETPOINT_RUN) &&
-      (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
-    int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
-    int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
-    Serial.print(">vel:");
-    Serial.print(vel);
-    Serial.print(",ver:");
-    Serial.println(ver);
-    
-    MotorControl.motorForward(0, vel);
-    MotorControl.motorReverse(1, ver);
-
-    if (counterPID > freq) {
-      portENTER_CRITICAL_ISR(&counterMux);
-      counterPID = 0;
-      portEXIT_CRITICAL_ISR(&counterMux);
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      pidleft.Compute();
-      pidright.Compute();
-    }
-  } else {
-    val_outputR=0;
-    val_outputL=0;
-    stopTimer();
-    time_now = millis();
-
-    stop_next_state = EXEC_ST;
-    machine_state   = STOP_ST;
-    encoder1_pos = 0;
-    encoder2_pos = 0;
-
-  }
-  stopExec(); // stop current execution
-}
-
-void forward(void) // function to drive forwards
-{
-  DEBUG_PRINTLN_FCT("exc forward fct");
-  DEBUG_PRINTLN_ACT("drive forward");
-  
-  showBitmap(image_data_EYES_DOWN);
-  
+  showBitmap(image_data_EYES_RIGHT);
   value_fix = wheel_balance; //initialisation de la balance
   if (motor_command_count > 0){
     //calcul de la vitesse de l'encodeur
       time_now = millis();
       measurment_time = time_now - last_time_now;
+      measurment_time = max(measurment_time, 5.0);
       last_time_now = time_now;     
 
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      computed_speedR = (encoder1_pos-enc1_last)/measurment_time;
-      computed_speedL = (encoder2_pos-enc2_last)/measurment_time;
+      enc_readL = abs(encoder1_pos);
+      enc_readR = abs(encoder2_pos);
+      computed_speedR = (abs(encoder1_pos)-abs(enc1_last))/measurment_time;
+      computed_speedL = (abs(encoder2_pos)-abs(enc2_last))/measurment_time;
+      
       enc1_last = encoder1_pos;
       enc2_last = encoder2_pos;
 
       if (computed_speedL != 0) {
-        delta_wheel = computed_speedR / computed_speedL;
+        delta_wheel = abs(computed_speedR / computed_speedL);
+        if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
+        delta_wheel = constrain(delta_wheel, 0.2, 5.0);
       } else {
         delta_wheel = 1; // valeur par défaut ou précédente
       }
@@ -505,6 +423,199 @@ void forward(void) // function to drive forwards
   
   double val_output_delta = constrain(delta_fix, -0.25, 0.25);
   delta_fix = val_output_delta;
+  value_fix += delta_fix;
+  
+  value_fix = constrain(value_fix, 0.7, 1.3);
+  
+  speedR = speedR*value_fix;
+  speedL = speedL/value_fix;
+  
+  if(speedL>255){speedL=255;}
+  if(speedR>255){speedR=255;}
+
+  MotorControl.motorReverse(0, speedR);
+  MotorControl.motorForward(1, speedL);
+  
+  motor_command_count ++;
+
+  print_values_for_plot();
+  if ((abs(encoder1_pos) < SETPOINT_TURN) &&
+      (abs(encoder2_pos) < SETPOINT_TURN)) {
+    
+    //Serial.print(">vel:");
+    //Serial.print(vel);
+    //Serial.print(",ver:");
+    //Serial.println(ver);
+  } else {
+    time_now = millis();
+    delta_fix = 0;
+    speedR = 
+    val_outputR=0;
+    val_outputL=0;
+    value_fix = wheel_balance;
+    last_time_now = 0;
+    enc1_last = 0;
+    enc2_last = 0;
+    speedL = default_speedL;
+    speedR =  default_speedR;
+    encoder1_pos = 0;
+    encoder2_pos = 0;
+    motor_command_count = 0;
+    stop_next_state = EXEC_ST;
+    machine_state   = STOP_ST;
+    stopTimer();
+    time_now = millis();
+    pid_delta.Reset();
+  }
+  stopExec(); // stop current execution
+}
+
+void turnLeft(void) // function to turn left
+{
+  DEBUG_PRINTLN_FCT("exc turnLeft fct");
+  DEBUG_PRINTLN_ACT("turn left");
+  print_values_for_plot();
+  showBitmap(image_data_EYES_LEFT);
+  value_fix = wheel_balance; //initialisation de la balance
+  if (motor_command_count > 0){
+    //calcul de la vitesse de l'encodeur
+      time_now = millis();
+      measurment_time = time_now - last_time_now;
+      measurment_time = max(measurment_time, 5.0);
+      last_time_now = time_now;     
+
+      enc_readL = abs(encoder1_pos);
+      enc_readR = abs(encoder2_pos);
+      computed_speedR = (abs(encoder1_pos)-abs(enc1_last))/measurment_time;
+      computed_speedL = (abs(encoder2_pos)-abs(enc2_last))/measurment_time;
+      
+      enc1_last = encoder1_pos;
+      enc2_last = encoder2_pos;
+
+      if (computed_speedL != 0) {
+        delta_wheel = abs(computed_speedR / computed_speedL);
+        if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
+        delta_wheel = constrain(delta_wheel, 0.2, 5.0);
+      } else {
+        delta_wheel = 1; // valeur par défaut ou précédente
+      }
+    if (counterPID > freq) {
+      portENTER_CRITICAL_ISR(&counterMux);
+      counterPID = 0;
+      portEXIT_CRITICAL_ISR(&counterMux);
+      //pidleft.Compute();
+      //pidright.Compute(); 
+      pid_delta.Compute();
+    }
+  }
+  else{
+    last_speedL = default_speedL;
+    last_speedR = default_speedL;
+  }
+  
+  //int vel = kspeed * (last_speedL + val_outputL); // setpoint_straight_run -> make sure robo goes straight
+  //int ver = kspeed * (last_speedR + val_outputR);
+  
+  double val_output_delta = constrain(delta_fix, -0.25, 0.25);
+  delta_fix = val_output_delta;
+  value_fix += delta_fix;
+  
+  value_fix = constrain(value_fix, 0.7, 1.3);
+  
+  speedR = speedR*value_fix;
+  speedL = speedL/value_fix;
+  
+  if(speedL>255){speedL=255;}
+  if(speedR>255){speedR=255;}
+
+  MotorControl.motorForward(0, speedR);
+  MotorControl.motorReverse(1, speedL);
+  
+  motor_command_count ++;
+
+  print_values_for_plot();
+  if ((abs(encoder1_pos) < SETPOINT_TURN) &&
+      (abs(encoder2_pos) < SETPOINT_TURN)) {
+    
+    //Serial.print(">vel:");
+    //Serial.print(vel);
+    //Serial.print(",ver:");
+    //Serial.println(ver);
+  } else {
+    time_now = millis();
+    delta_fix = 0;
+    speedR = default_speedR;
+    speedL = default_speedL;
+    val_outputR=0;
+
+    val_outputL=0;
+    value_fix = wheel_balance;
+    last_time_now = 0;
+    enc1_last = 0;
+    enc2_last = 0;
+    speedL = default_speedL;
+    speedR =  default_speedR;
+    encoder1_pos = 0;
+    encoder2_pos = 0;
+    motor_command_count = 0;
+    stop_next_state = EXEC_ST;
+    machine_state   = STOP_ST;
+    stopTimer();
+    time_now = millis();
+    pid_delta.Reset();
+  }
+  stopExec(); // stop current execution
+}
+
+void forward(void) // function to drive forwards
+{
+  DEBUG_PRINTLN_FCT("exc forward fct");
+  DEBUG_PRINTLN_ACT("drive forward");
+  
+  showBitmap(image_data_EYES_DOWN);
+  
+  value_fix = wheel_balance; //initialisation de la balance
+  if (motor_command_count > 0){
+    //calcul de la vitesse de l'encodeur
+      time_now = millis();
+      measurment_time = time_now - last_time_now;
+      measurment_time = max(measurment_time, 5.0);
+      last_time_now = time_now;     
+
+      enc_readL = encoder1_pos;
+      enc_readR = encoder2_pos;
+      computed_speedR = (encoder1_pos-enc1_last)/measurment_time;
+      computed_speedL = (encoder2_pos-enc2_last)/measurment_time;
+      
+      enc1_last = encoder1_pos;
+      enc2_last = encoder2_pos;
+
+      if (computed_speedL != 0) {
+        delta_wheel = abs(computed_speedR / computed_speedL);
+        if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
+        delta_wheel = constrain(delta_wheel, 0.2, 5.0);
+      } else {
+        delta_wheel = 1; // valeur par défaut ou précédente
+      }
+    if (counterPID > freq) {
+      portENTER_CRITICAL_ISR(&counterMux);
+      counterPID = 0;
+      portEXIT_CRITICAL_ISR(&counterMux);
+      //pidleft.Compute();
+      //pidright.Compute(); 
+      pid_delta.Compute();
+    }
+  }
+  else{
+    last_speedL = default_speedL;
+    last_speedR = default_speedL;
+  }
+  
+  //int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
+  //int speedL = speedL + val_outputL;
+  
+  double val_output_delta = constrain(delta_fix, -0.25, 0.25);
+  delta_fix = val_output_delta; 
   value_fix += delta_fix;
   
   value_fix = constrain(value_fix, 0.7, 1.3);
@@ -558,39 +669,91 @@ void back(void) // function to drive backwards
   DEBUG_PRINTLN_ACT("drive back");
   print_values_for_plot();
   showBitmap(image_data_EYES_DOWN);
-  if ((abs(encoder1_pos) < SETPOINT_RUN) &&
-      (abs(encoder2_pos) < SETPOINT_RUN)) {
-    startTimer();
-    int vel = kspeed * (speedL + val_outputL) + setpoint_straight_run; // setpoint_straight_run -> make sure robo goes straight
-    int ver = kspeed * (speedR + val_outputR) - setpoint_straight_run;
-    Serial.print(">vel:");
-    Serial.print(vel);
-    Serial.print(",ver:");
-    Serial.println(ver);
-    
-    MotorControl.motorForward(0, vel);
-    MotorControl.motorForward(1, ver);
+ value_fix = wheel_balance; //initialisation de la balance
+  if (motor_command_count > 0){
+    //calcul de la vitesse de l'encodeur
+      time_now = millis();
+      measurment_time = time_now - last_time_now;
+      measurment_time = max(measurment_time, 5.0);
+      last_time_now = time_now;     
 
+      enc_readL = abs(encoder1_pos);
+      enc_readR = abs(encoder2_pos);
+      computed_speedR = (abs(encoder1_pos)-abs(enc1_last))/measurment_time;
+      computed_speedL = (abs(encoder2_pos)-abs(enc2_last))/measurment_time;
+      
+      enc1_last = encoder1_pos;
+      enc2_last = encoder2_pos;
+
+      if (computed_speedL != 0) {
+        delta_wheel = abs(computed_speedR / computed_speedL);
+        if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
+        delta_wheel = constrain(delta_wheel, 0.2, 5.0);
+      } else {
+        delta_wheel = 1; // valeur par défaut ou précédente
+      }
     if (counterPID > freq) {
       portENTER_CRITICAL_ISR(&counterMux);
       counterPID = 0;
       portEXIT_CRITICAL_ISR(&counterMux);
-      enc_readL = encoder1_pos;
-      enc_readR = encoder2_pos;
-      pidleft.Compute();
-      pidright.Compute();
+      //pidleft.Compute();
+      //pidright.Compute(); 
+      pid_delta.Compute();
     }
+  }
+  else{
+    last_speedL = default_speedL;
+    last_speedR = default_speedL;
+  }
+  
+  //int vel = kspeed * (last_speedL + val_outputL); // setpoint_straight_run -> make sure robo goes straight
+  //int ver = kspeed * (last_speedR + val_outputR);
+  
+  double val_output_delta = constrain(delta_fix, -0.25, 0.25);
+  delta_fix = val_output_delta;
+  value_fix += delta_fix;
+  
+  value_fix = constrain(value_fix, 0.7, 1.3);
+  
+  speedR = speedR*value_fix;
+  speedL = speedL/value_fix;
+  
+  if(speedL>255){speedL=255;}
+  if(speedR>255){speedR=255;}
+
+  MotorControl.motorForward(0, speedR);
+  MotorControl.motorForward(1, speedL);
+  
+  motor_command_count ++;
+
+  print_values_for_plot();
+  if ((abs(encoder1_pos) < SETPOINT_RUN) &&
+      (abs(encoder2_pos) < SETPOINT_RUN)) {
+    
+    //Serial.print(">vel:");
+    //Serial.print(vel);
+    //Serial.print(",ver:");
+    //Serial.println(ver);
   } else {
+    time_now = millis();
+    delta_fix = 0;
+    speedR = 
     val_outputR=0;
     val_outputL=0;
-    stopTimer();
-    time_now = millis();
-
-    stop_next_state = EXEC_ST;
-    machine_state   = STOP_ST;
+    value_fix = wheel_balance;
+    last_time_now = 0;
+    enc1_last = 0;
+    enc2_last = 0;
+    speedL = default_speedL;
+    speedR =  default_speedR;
     encoder1_pos = 0;
     encoder2_pos = 0;
-
+    motor_command_count = 0;
+    stop_next_state = EXEC_ST;
+    machine_state   = STOP_ST;
+    stopTimer();
+    time_now = millis();
+    pid_delta.Reset();
   }
   stopExec(); // stop current execution
 }
@@ -855,7 +1018,7 @@ void setup() // microcontroller setup runs once
 {
   Serial.begin(9600); // setup serial monitor
   DEBUG_PRINTLN_FCT("exc microcontroller setup fct"); // debug print
-  
+  setLed(255, 0, 0);
   //display setup 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
     Serial.println(F("SSD1306 allocation failed"));
@@ -902,8 +1065,8 @@ void setup() // microcontroller setup runs once
   attachInterrupt(ENC2_B, &Encoders_Interrupt_2, CHANGE );
 
   // Tuning Setup
-  tuningSetupTurn();
-  tuningSetupMove();
+  //tuningSetupTurn();
+  //tuningSetupMove();
 
   machine_state = INIT_ST; // set machine to init state
 
