@@ -485,7 +485,6 @@ void turnLeft(void) // function to turn left
     //calcul de la vitesse de l'encodeur
       time_now = millis();
       measurment_time = time_now - last_time_now;
-      measurment_time = max(measurment_time, 5.0);
       last_time_now = time_now;     
 
       enc_readL = abs(encoder1_pos);
