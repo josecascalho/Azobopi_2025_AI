@@ -36,6 +36,51 @@
   #define DEBUG_PRINTLN_STATE(x)
 #endif // debug setup
 
+//pour la gestion du webserver
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
+
+const char* ssid = "Partage_julien";
+const char* password = "poooorus15";
+
+AsyncWebServer server(80);
+WebSocketsServer webSocket(81);
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Réglage PID</title>
+</head>
+<body>
+  <h2>Réglage des paramètres PID</h2>
+  <label>Kp: <input type="number" id="kp" step="0.1" value="1.0"></label><br>
+  <label>Ki: <input type="number" id="ki" step="0.1" value="0.5"></label><br>
+  <label>Kd: <input type="number" id="kd" step="0.1" value="0.1"></label><br><br>
+  <button onclick="sendPID()">Envoyer</button>
+  <p id="status">En attente...</p>
+
+<script>
+  var ws = new WebSocket("ws://" + location.hostname + ":81/");
+  ws.onmessage = function(event) {
+    document.getElementById("status").innerText = "Réponse: " + event.data;
+  };
+
+  function sendPID() {
+    var kp = parseFloat(document.getElementById("kp").value);
+    var ki = parseFloat(document.getElementById("ki").value);
+    var kd = parseFloat(document.getElementById("kd").value);
+    var msg = JSON.stringify({ kp: kp, ki: ki, kd: kd });
+    ws.send(msg);
+  }
+</script>
+</body>
+</html>
+)rawliteral";
+
+
 // include software header files
 #include <Arduino.h>
 
@@ -133,12 +178,12 @@ double k_delta = 0.7;
 double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
 double delta_fix = 0;
-double kp_wheel = 0.8, ki_wheel = 0.05, kd_wheel = 0.15;
+double kp_wheel = 0.25, ki_wheel = 0.005, kd_wheel = 0.3;
 double delta_goal = 1;
-double kp = 0.8, ki =0.001, kd = 0.03; // changes in ki & kd resulted in strange behaviour
+double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 int kspeed = 1;
 volatile int counterPID;
-int freq = 500;
+int freq = 100;
 int motor_command_count = 0;
 double value_fix = wheel_balance;
 
@@ -148,7 +193,7 @@ int setpoint_values_turn[num_setpoint_values_turn];
 int setpoint_turn_min = 600;
 int setpoint_turn_max = 900;
 int tune_counter_turn;
-int SETPOINT_TURN; 
+int SETPOINT_TURN = 452; 
 
 // tune forward/backward movement regarding differences in motors
 #define num_setpoint_values_move 7 // number of possible tuning setpoints in equivalent distances
@@ -158,8 +203,6 @@ float setpoint_move_max = 2.00;
 int tune_counter_move;
 // initial straight run
 float setpoint_straight_run;     // increase to go right 
-
-
 
 // Encoders Interrupt function variables and table
 volatile double encoder1_pos;
@@ -178,10 +221,10 @@ int enc_count = 0;
 // Initialize motors library
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
-// initial motor speed
-int default_speedL = 50; // because azobopi floated to right side     
-int default_speedR = 50;
-int speedL =50, speedR = 50;
+// initial motor speed  
+int default_speedL = 40; // because azobopi floated to right side     
+int default_speedR = 55;
+int speedL = default_speedL, speedR = default_speedR;
 
 // motor speed for turning -> set lower fixed speed for turning
 int turnspeedL = 60;
