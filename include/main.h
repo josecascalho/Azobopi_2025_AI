@@ -52,14 +52,41 @@ const char index_html[] PROGMEM = R"rawliteral(
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Réglage PID</title>
+  <title>settings of the robot</title>
 </head>
 <body>
-  <h2>Réglage des paramètres PID</h2>
+  <h2>motors speed forward</h2>
+  <label>speed left: <input type="number" id="speed_left" step="0.1" value="40"></label><br>
+  <label>speed right: <input type="number" id="speed_right" step="0.1" value="55"></label><br>
+  <button onclick="send_speed()">Send settings </button>
+  
+  <h2>motors speed rotation</h2>
+  <label>speed left: <input type="number" id="rotation_left" step="0.1" value="40"></label><br>
+  <label>speed right: <input type="number" id="rotation_right" step="0.1" value="55"></label><br>
+  <button onclick="send_rotation()">Send settings </button>
+
+  <h2>distance</h2>
+  <label>distance: <input type="number" id="distance" step="0.1" value="40"></label><br>
+  <button onclick="send_distance()">Send settings </button>
+
+  <h2>Distance PID setting</h2>
   <label>Kp: <input type="number" id="kp" step="0.1" value="1.0"></label><br>
   <label>Ki: <input type="number" id="ki" step="0.1" value="0.5"></label><br>
   <label>Kd: <input type="number" id="kd" step="0.1" value="0.1"></label><br><br>
-  <button onclick="sendPID()">Envoyer</button>
+  <button onclick="sendPID()">Send settings </button>
+
+  <h2>Balance PID setting</h2>
+  <label>Kp_wheel: <input type="number" id="kp_wheel" step="0.1" value="0.45"></label><br>
+  <label>Ki_wheel: <input type="number" id="ki_wheel" step="0.1" value="0.005"></label><br>
+  <label>Kd_wheel: <input type="number" id="kd_wheel" step="0.1" value="0.2"></label><br><br>
+  <button onclick="sendPID_balance()">Send settings</button>
+
+  <button onclick="set_command(1)" id="for">forward</button>
+  <button onclick="set_command(2)" id="bac">back</button>
+  <button onclick="set_command(3)" id="lef">right</button>
+  <button onclick="set_command(4)" id="rig">left</button>
+  <button onclick="set_command(5)" id="sto">stop</button>
+
   <p id="status">En attente...</p>
 
 <script>
@@ -68,13 +95,47 @@ const char index_html[] PROGMEM = R"rawliteral(
     document.getElementById("status").innerText = "Réponse: " + event.data;
   };
 
+  function send_speed() {
+    var speed_left = parseFloat(document.getElementById("speed_left").value);
+    var speed_right = parseFloat(document.getElementById("speed_right").value);
+    var msg = JSON.stringify({ speed_left: speed_left, speed_right: speed_right });
+    ws.send(msg);
+  }
+
+  function send_rotation() {
+    var rotation_left = parseFloat(document.getElementById("roation_left").value);
+    var rotaion_right = parseFloat(document.getElementById("rotation_right").value);
+    var msg = JSON.stringify({ rotation_left: rotation_left, rotation_right: rotation_right });
+    ws.send(msg);
+  }
+
+  function send_distance() {
+    var distance = parseFloat(document.getElementById("distance").value);
+    var msg = JSON.stringify({distance: distance});
+    ws.send(msg);
+  }
+
   function sendPID() {
-    var kp = parseFloat(document.getElementById("kp").value);
-    var ki = parseFloat(document.getElementById("ki").value);
-    var kd = parseFloat(document.getElementById("kd").value);
+    var kp = parseFloat(document.getElementById("kp_wheel").value);
+    var ki = parseFloat(document.getElementById("ki_wheel").value);
+    var kd = parseFloat(document.getElementById("kd_wheel").value);
     var msg = JSON.stringify({ kp: kp, ki: ki, kd: kd });
     ws.send(msg);
   }
+
+  function sendPID_balance() {
+    var kp = parseFloat(document.getElementById("kp").value);
+    var ki = parseFloat(document.getElementById("ki").value);
+    var kd = parseFloat(document.getElementById("kd").value);
+    var msg = JSON.stringify({ kp_wheel: kp, ki_wheel: ki, kd_wheel: kd });
+    ws.send(msg);
+  }
+
+  function set_command(comm) {
+    var msg = JSON.stringify({command: comm});
+    ws.send(msg);
+  }
+
 </script>
 </body>
 </html>

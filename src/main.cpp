@@ -1,13 +1,52 @@
 #include "main.h"
 void readcamera();
-
-
+void forward_web(int comm);
+int get_int_from_json(char &key)
+{
+  return key;
+}
 void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
   if (type == WStype_TEXT) {
     String msg = String((char*)payload);
     Serial.println("Message reçu : " + msg);
 
-    // Analyse JSON basique (sans lib JSON pour économiser la mémoire)
+    if (msg.indexOf("distance") >= 0) {
+      int distance_start = msg.indexOf("distance") + 10;
+      int distance_end = msg.indexOf("}", distance_start);
+      Setpoint = msg.substring(distance_start, distance_end).toInt();
+    }
+    if (msg.indexOf("speed_left") >= 0) {
+      int speed_left_start = msg.indexOf("speed_left") + 12;
+      int speed_left_end = msg.indexOf(",");
+      int speed_right_start = msg.indexOf("speed_right") + 14;
+      int comm_end = msg.indexOf("}", comm_start);
+      int comm = msg.substring(comm_start, comm_end).toInt();
+      forward_web(comm);
+    }
+
+    if (msg.indexOf("command") >= 0) {
+      int comm_start = msg.indexOf("command") + 9;
+      int comm_end = msg.indexOf("}", comm_start);
+      int comm = msg.substring(comm_start, comm_end).toInt();
+      forward_web(comm);
+    }
+
+    if (msg.indexOf("kp_wheel") >= 0) {
+      int kp_start = msg.indexOf("kp_wheel") + 10;
+      int kp_end = msg.indexOf(",", kp_start);
+      int ki_start = msg.indexOf("ki_wheel") + 10;
+      int ki_end = msg.indexOf(",", ki_start);
+      int kd_start = msg.indexOf("kd_wheel") + 4;
+      int kd_end = msg.indexOf("}", kd_start);
+
+      kp_wheel = msg.substring(kp_start, kp_end).toDouble();
+      ki_wheel = msg.substring(ki_start, ki_end).toDouble();
+      kd_wheel = msg.substring(kd_start, kd_end).toDouble();
+
+      Serial.printf("update PID balance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
+      webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
+    }
+
     if (msg.indexOf("kp") >= 0) {
       int kp_start = msg.indexOf("kp") + 4;
       int kp_end = msg.indexOf(",", kp_start);
@@ -16,12 +55,14 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       int kd_start = msg.indexOf("kd") + 4;
       int kd_end = msg.indexOf("}", kd_start);
 
-      kp = msg.substring(kp_start, kp_end).toFloat();
-      ki = msg.substring(ki_start, ki_end).toFloat();
-      kd = msg.substring(kd_start, kd_end).toFloat();
+      kp = msg.substring(kp_start, kp_end).toDouble();
+      ki = msg.substring(ki_start, ki_end).toDouble();
+      kd = msg.substring(kd_start, kd_end).toDouble();
 
-      Serial.printf("MàJ PID: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
+      Serial.printf("Update PID distance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
       webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
+
+      
     }
   }
 }
@@ -608,7 +649,117 @@ void turnLeft(void) // function to turn left
   }
   stopExec(); // stop current execution
 }
+void forward_web(int comm) // function to drive forwards
+{
+  DEBUG_PRINTLN_ACT("drive web");
+  value_fix = wheel_balance; //initialisation de la balance
+  showBitmap(image_data_EYES_DOWN);
 
+  if(comm == 1)
+  {
+    DEBUG_PRINTLN_ACT("drive forward");
+    MotorControl.motorReverse(0, speedR);
+    MotorControl.motorReverse(1, speedL);
+  }
+  else if(comm == 2)
+  {
+    DEBUG_PRINTLN_ACT("drive back");
+    MotorControl.motorForward(0, speedR);
+    MotorControl.motorForward(1, speedL);
+  }
+  else if(comm == 3)
+  {
+    DEBUG_PRINTLN_ACT("drive left");
+    MotorControl.motorReverse(0, speedR);
+    MotorControl.motorForward(1, speedL);
+  }
+  else if(comm == 4)
+  {
+    DEBUG_PRINTLN_ACT("drive right");
+    MotorControl.motorForward(0, speedR);
+    MotorControl.motorReverse(1, speedL);
+  }
+  else if(comm == 5)
+  {
+    DEBUG_PRINTLN_ACT("stop");
+    MotorControl.motorStop(0);
+    MotorControl.motorStop(1);
+  }
+
+  //calculs pour PID
+  startTimer();
+  last_speedL = default_speedL;
+  last_speedR = default_speedL;
+
+  while((abs(encoder1_pos) < Setpoint) &&
+        (abs(encoder2_pos) < Setpoint)){
+    //calcul de la vitesse de l'encodeur (output of the system)
+    time_now = millis();
+    measurment_time = time_now - last_time_now;
+    measurment_time = max(measurment_time, 5.0);
+    last_time_now = time_now;     
+
+    enc_readL = encoder1_pos;
+    enc_readR = encoder2_pos;
+    computed_speedR = (encoder1_pos-enc1_last)/measurment_time;
+    computed_speedL = (encoder2_pos-enc2_last)/measurment_time;
+    
+    enc1_last = encoder1_pos;
+    enc2_last = encoder2_pos;
+
+    if (computed_speedL != 0) {
+      delta_wheel = abs(computed_speedR / computed_speedL);
+      if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
+      delta_wheel = constrain(delta_wheel, 0.2, 5.0);
+    } else {
+      delta_wheel = 1; // valeur par défaut ou précédente
+    }
+    //compute the PID
+    if (counterPID > freq) {
+      portENTER_CRITICAL_ISR(&counterMux);
+      counterPID = 0;
+      portEXIT_CRITICAL_ISR(&counterMux);
+      //pidleft.Compute();
+      //pidright.Compute(); 
+      pid_delta.Compute();
+    }
+
+    //int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
+    //int speedL = speedL + val_outputL;
+    
+    double val_output_delta = constrain(delta_fix, -0.25, 0.25);
+    delta_fix = val_output_delta;
+    value_fix += delta_fix;
+    
+    value_fix = constrain(value_fix, 0.7, 1.3);
+    
+    speedR = speedR*value_fix;
+    speedL = speedL/value_fix;
+    
+    if(speedL>255){speedL=255;}
+    if(speedR>255){speedR=255;}
+    
+    motor_command_count ++;
+    print_values_for_plot();
+  }
+  time_now = millis();
+  delta_fix = 0;
+  val_outputR=0;
+  val_outputL=0;
+  value_fix = wheel_balance;
+  last_time_now = 0;
+  enc1_last = 0;
+  enc2_last = 0;
+  speedL = default_speedL;
+  speedR =  default_speedR;
+  encoder1_pos = 0;
+  encoder2_pos = 0;
+  motor_command_count = 0;
+  stopTimer();
+  time_now = millis();
+  pid_delta.Reset();
+  MotorControl.motorsStop(); // stop motors
+}
 void forward(void) // function to drive forwards
 {
   DEBUG_PRINTLN_FCT("exc forward fct");
