@@ -13,6 +13,9 @@ public:
 
   bool Compute();
   void Reset();
+  void SetP(double p);
+  void SetI(double i);
+  void SetD(double d);
   double GetP();
   double GetI();
   double GetD();

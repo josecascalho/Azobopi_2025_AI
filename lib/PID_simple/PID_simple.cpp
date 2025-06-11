@@ -40,6 +40,18 @@ bool PID::Compute() {
   else return false;
 }
 
+void PID::SetP(double p) {
+  _kp = p;
+}
+
+void PID::SetI(double i) {
+  _ki = i;
+}
+
+void PID::SetD(double d) {
+  _kd = d;
+}
+
 double PID::GetP() {
   return dispP;
 }

@@ -15,13 +15,19 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       int distance_end = msg.indexOf("}", distance_start);
       Setpoint = msg.substring(distance_start, distance_end).toInt();
     }
+
     if (msg.indexOf("speed_left") >= 0) {
       int speed_left_start = msg.indexOf("speed_left") + 12;
       int speed_left_end = msg.indexOf(",");
-      int speed_right_start = msg.indexOf("speed_right") + 14;
-      int comm_end = msg.indexOf("}", comm_start);
-      int comm = msg.substring(comm_start, comm_end).toInt();
-      forward_web(comm);
+      int speed_right_start = msg.indexOf("speed_right") + 13;
+      int speed_right_end = msg.indexOf("}", speed_right_start);
+      default_speedL = msg.substring(speed_left_start, speed_left_end).toInt();
+      default_speedR = msg.substring(speed_right_start, speed_right_end).toInt();
+      Serial.print("new speeds : ");
+      Serial.print("L : ");
+      Serial.print(default_speedL);
+      Serial.print("R : ");
+      Serial.println(default_speedR);
     }
 
     if (msg.indexOf("command") >= 0) {
@@ -31,19 +37,23 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       forward_web(comm);
     }
 
-    if (msg.indexOf("kp_wheel") >= 0) {
-      int kp_start = msg.indexOf("kp_wheel") + 10;
+    if (msg.indexOf("p_wheel") >= 0) {
+      int kp_start = msg.indexOf("p_wheel") + 9;
       int kp_end = msg.indexOf(",", kp_start);
-      int ki_start = msg.indexOf("ki_wheel") + 10;
+      int ki_start = msg.indexOf("i_wheel") + 9;
       int ki_end = msg.indexOf(",", ki_start);
-      int kd_start = msg.indexOf("kd_wheel") + 4;
+      int kd_start = msg.indexOf("d_wheel") + 9;
       int kd_end = msg.indexOf("}", kd_start);
 
       kp_wheel = msg.substring(kp_start, kp_end).toDouble();
       ki_wheel = msg.substring(ki_start, ki_end).toDouble();
       kd_wheel = msg.substring(kd_start, kd_end).toDouble();
 
-      Serial.printf("update PID balance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
+      pid_delta.SetP(kp_wheel);
+      pid_delta.SetI(ki_wheel);
+      pid_delta.SetD(kd_wheel);
+
+      Serial.printf("update PID balance: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", kp_wheel, ki_wheel, kd_wheel);
       webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
     }
 
@@ -59,52 +69,14 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       ki = msg.substring(ki_start, ki_end).toDouble();
       kd = msg.substring(kd_start, kd_end).toDouble();
 
+      pid_distance.SetP(kp);
+      pid_distance.SetI(ki);
+      pid_distance.SetD(kd);
+
       Serial.printf("Update PID distance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
       webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
 
       
-    }
-  }
-}
-
-void StartWebServer(void)
-{
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500); Serial.print(".");
-  }
-  Serial.println("Connecté à l'adresse IP : " + WiFi.localIP().toString());
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", index_html);
-  });
-  server.begin();
-
-  webSocket.begin();
-  webSocket.onEvent(handleWebSocket);
-}
-
-
-void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
-  if (type == WStype_TEXT) {
-    String msg = String((char*)payload);
-    Serial.println("Message reçu : " + msg);
-
-    // Analyse JSON basique (sans lib JSON pour économiser la mémoire)
-    if (msg.indexOf("kp") >= 0) {
-      int kp_start = msg.indexOf("kp") + 4;
-      int kp_end = msg.indexOf(",", kp_start);
-      int ki_start = msg.indexOf("ki") + 4;
-      int ki_end = msg.indexOf(",", ki_start);
-      int kd_start = msg.indexOf("kd") + 4;
-      int kd_end = msg.indexOf("}", kd_start);
-
-      kp = msg.substring(kp_start, kp_end).toFloat();
-      ki = msg.substring(ki_start, ki_end).toFloat();
-      kd = msg.substring(kd_start, kd_end).toFloat();
-
-      Serial.printf("MàJ PID: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
-      webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
     }
   }
 }
@@ -691,49 +663,48 @@ void turnLeft(void) // function to turn left
   }
   stopExec(); // stop current execution
 }
+
+void act_com(int command, double speed_left, double speed_right)
+{
+  if(command == 1)
+  {
+    MotorControl.motorReverse(0, speedR);
+    MotorControl.motorReverse(1, speedL);
+  }
+  else if(command == 2)
+  {
+    MotorControl.motorForward(0, speedR);
+    MotorControl.motorForward(1, speedL);
+  }
+  else if(command == 3)
+  {
+    MotorControl.motorReverse(0, speedR);
+    MotorControl.motorForward(1, speedL);
+  }
+  else if(command == 4)
+  {
+    MotorControl.motorForward(0, speedR);
+    MotorControl.motorReverse(1, speedL);
+  }
+  else if(command == 5)
+  {
+    MotorControl.motorStop(0);
+    MotorControl.motorStop(1);
+  }
+}
+
 void forward_web(int comm) // function to drive forwards
 {
   DEBUG_PRINTLN_ACT("drive web");
   value_fix = wheel_balance; //initialisation de la balance
   showBitmap(image_data_EYES_DOWN);
 
-  if(comm == 1)
-  {
-    DEBUG_PRINTLN_ACT("drive forward");
-    MotorControl.motorReverse(0, speedR);
-    MotorControl.motorReverse(1, speedL);
-  }
-  else if(comm == 2)
-  {
-    DEBUG_PRINTLN_ACT("drive back");
-    MotorControl.motorForward(0, speedR);
-    MotorControl.motorForward(1, speedL);
-  }
-  else if(comm == 3)
-  {
-    DEBUG_PRINTLN_ACT("drive left");
-    MotorControl.motorReverse(0, speedR);
-    MotorControl.motorForward(1, speedL);
-  }
-  else if(comm == 4)
-  {
-    DEBUG_PRINTLN_ACT("drive right");
-    MotorControl.motorForward(0, speedR);
-    MotorControl.motorReverse(1, speedL);
-  }
-  else if(comm == 5)
-  {
-    DEBUG_PRINTLN_ACT("stop");
-    MotorControl.motorStop(0);
-    MotorControl.motorStop(1);
-  }
-
   //calculs pour PID
   startTimer();
   last_speedL = default_speedL;
   last_speedR = default_speedL;
 
-  while((abs(encoder1_pos) < Setpoint) &&
+  while((abs(encoder1_pos) < Setpoint) ||
         (abs(encoder2_pos) < Setpoint)){
     //calcul de la vitesse de l'encodeur (output of the system)
     time_now = millis();
@@ -769,19 +740,27 @@ void forward_web(int comm) // function to drive forwards
     //int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
     //int speedL = speedL + val_outputL;
     
+    //to avoid to strong values
     double val_output_delta = constrain(delta_fix, -0.25, 0.25);
     delta_fix = val_output_delta;
+
+    //add the fix to the balance
     value_fix += delta_fix;
     
     value_fix = constrain(value_fix, 0.7, 1.3);
     
+    //compute the new speed with the balance
     speedR = speedR*value_fix;
     speedL = speedL/value_fix;
     
+    //speed can be 255 mx
     if(speedL>255){speedL=255;}
     if(speedR>255){speedR=255;}
     
+    //send new speed to the motors
+    act_com(comm, speedL, speedR);
     motor_command_count ++;
+
     print_values_for_plot();
   }
   time_now = millis();

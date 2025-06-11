@@ -128,18 +128,18 @@ const char index_html[] PROGMEM = R"rawliteral(
   }
 
   function sendPID() {
-    var kp = parseFloat(document.getElementById("kp_wheel").value);
-    var ki = parseFloat(document.getElementById("ki_wheel").value);
-    var kd = parseFloat(document.getElementById("kd_wheel").value);
+    var kp = parseFloat(document.getElementById("kp").value);
+    var ki = parseFloat(document.getElementById("ki").value);
+    var kd = parseFloat(document.getElementById("kd").value);
     var msg = JSON.stringify({ kp: kp, ki: ki, kd: kd });
     ws.send(msg);
   }
 
   function sendPID_balance() {
-    var kp = parseFloat(document.getElementById("kp").value);
-    var ki = parseFloat(document.getElementById("ki").value);
-    var kd = parseFloat(document.getElementById("kd").value);
-    var msg = JSON.stringify({ kp_wheel: kp, ki_wheel: ki, kd_wheel: kd });
+    var kp = parseFloat(document.getElementById("kp_wheel").value);
+    var ki = parseFloat(document.getElementById("ki_wheel").value);
+    var kd = parseFloat(document.getElementById("kd_wheel").value);
+    var msg = JSON.stringify({ p_wheel: kp, i_wheel: ki, d_wheel: kd });
     ws.send(msg);
   }
 
@@ -252,13 +252,10 @@ double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
 double delta_fix = 0;
 double kp_wheel = 0.25, ki_wheel = 0.005, kd_wheel = 0.3;
-double kp_wheel = 0.25, ki_wheel = 0.005, kd_wheel = 0.3;
 double delta_goal = 1;
-double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 int kspeed = 1;
 volatile int counterPID;
-int freq = 100;
 int freq = 100;
 int motor_command_count = 0;
 double value_fix = wheel_balance;
@@ -269,7 +266,6 @@ int setpoint_values_turn[num_setpoint_values_turn];
 int setpoint_turn_min = 600;
 int setpoint_turn_max = 900;
 int tune_counter_turn;
-int SETPOINT_TURN = 452; 
 int SETPOINT_TURN = 452; 
 
 // tune forward/backward movement regarding differences in motors
@@ -298,10 +294,6 @@ int enc_count = 0;
 // Initialize motors library
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
-// initial motor speed  
-int default_speedL = 40; // because azobopi floated to right side     
-int default_speedR = 55;
-int speedL = default_speedL, speedR = default_speedR;
 // initial motor speed  
 int default_speedL = 40; // because azobopi floated to right side     
 int default_speedR = 55;
