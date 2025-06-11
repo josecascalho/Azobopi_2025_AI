@@ -80,14 +80,26 @@ const char index_html[] PROGMEM = R"rawliteral(
   <label>Ki_wheel: <input type="number" id="ki_wheel" step="0.1" value="0.005"></label><br>
   <label>Kd_wheel: <input type="number" id="kd_wheel" step="0.1" value="0.2"></label><br><br>
   <button onclick="sendPID_balance()">Send settings</button>
-
-  <button onclick="set_command(1)" id="for">forward</button>
-  <button onclick="set_command(2)" id="bac">back</button>
-  <button onclick="set_command(3)" id="lef">right</button>
-  <button onclick="set_command(4)" id="rig">left</button>
-  <button onclick="set_command(5)" id="sto">stop</button>
-
   <p id="status">En attente...</p>
+  <br>
+  <table align="center">
+    <tr>
+      <td></td>
+      <td><button onclick="set_command(1)" id="for">forward</button></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><button onclick="set_command(4)" id="rig">left</button></td>
+      <td><button onclick="set_command(5)" id="sto">stop</button></td>
+      <td><button onclick="set_command(3)" id="lef">right</button></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button onclick="set_command(2)" id="bac">back</button></td>
+      <td></td>
+    </tr>
+  </table>
+  
 
 <script>
   var ws = new WebSocket("ws://" + location.hostname + ":81/");
@@ -240,10 +252,13 @@ double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
 double delta_fix = 0;
 double kp_wheel = 0.25, ki_wheel = 0.005, kd_wheel = 0.3;
+double kp_wheel = 0.25, ki_wheel = 0.005, kd_wheel = 0.3;
 double delta_goal = 1;
+double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 int kspeed = 1;
 volatile int counterPID;
+int freq = 100;
 int freq = 100;
 int motor_command_count = 0;
 double value_fix = wheel_balance;
@@ -254,6 +269,7 @@ int setpoint_values_turn[num_setpoint_values_turn];
 int setpoint_turn_min = 600;
 int setpoint_turn_max = 900;
 int tune_counter_turn;
+int SETPOINT_TURN = 452; 
 int SETPOINT_TURN = 452; 
 
 // tune forward/backward movement regarding differences in motors
@@ -282,6 +298,10 @@ int enc_count = 0;
 // Initialize motors library
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
+// initial motor speed  
+int default_speedL = 40; // because azobopi floated to right side     
+int default_speedR = 55;
+int speedL = default_speedL, speedR = default_speedR;
 // initial motor speed  
 int default_speedL = 40; // because azobopi floated to right side     
 int default_speedR = 55;
