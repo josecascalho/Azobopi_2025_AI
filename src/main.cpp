@@ -81,8 +81,6 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
 
       Serial.printf("Update PID distance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
       webSocket.sendTXT(client_num, "New PID received+");
-
-      
     }
   }
 }
@@ -708,7 +706,6 @@ void forward_web(int comm) // function to drive forwards
 
   //if on ore more motors need to turn in other way
   if(comm == 2)
-
   {
     speedL = speedL_back;
     speedR = speedR_back;
@@ -728,8 +725,8 @@ void forward_web(int comm) // function to drive forwards
   startTimer();
 
 
-  while((abs(encoder1_pos) < Setpoint) ||
-        (abs(encoder2_pos) < Setpoint) || comm != 5){
+  while((abs(encoder1_pos) < Setpoint) &&
+        (abs(encoder2_pos) < Setpoint)){
     //calcul de la vitesse de l'encodeur (output of the system)
     time_now = millis();
     measurment_time = time_now - last_time_now;
@@ -746,6 +743,10 @@ void forward_web(int comm) // function to drive forwards
 
     if (computed_speedL != 0) {
       delta_wheel = abs(computed_speedR / computed_speedL);
+      if (abs(delta_wheel - 1.0) < 0.02) {
+        delta_fix = 0;
+        pid_delta.Reset();
+      }
       if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
       delta_wheel = constrain(delta_wheel, 0.2, 5.0);
     } else {

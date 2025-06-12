@@ -102,7 +102,7 @@ int setpoint_values_turn[num_setpoint_values_turn];
 int setpoint_turn_min = 600;
 int setpoint_turn_max = 900;
 int tune_counter_turn;
-int SETPOINT_TURN = 452;
+int SETPOINT_TURN = 1808;
 
 // commands
 int nr_comm;
@@ -122,7 +122,7 @@ int last_machine_state;
 int stop_next_state;
 
 // SetPoints for PID
-#define SETPOINT_RUN 3600 // to be replaced as integers 
+#define SETPOINT_RUN 3148 // to be replaced as integers 
 
 
 // PID
