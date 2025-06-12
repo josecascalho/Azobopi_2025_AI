@@ -1,10 +1,10 @@
 #include "main.h"
+
+//fuction declaration
 void readcamera();
 void forward_web(int comm);
-int get_int_from_json(char &key)
-{
-  return key;
-}
+String getHTML();
+
 void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
   if (type == WStype_TEXT) {
     String msg = String((char*)payload);
@@ -13,7 +13,13 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
     if (msg.indexOf("distance") >= 0) {
       int distance_start = msg.indexOf("distance") + 10;
       int distance_end = msg.indexOf("}", distance_start);
-      Setpoint = msg.substring(distance_start, distance_end).toInt();
+      Setpoint_run = msg.substring(distance_start, distance_end).toInt();
+    }
+    
+    if (msg.indexOf("distance_turn") >= 0) {
+      int distance_turn_start = msg.indexOf("distance_turn") + 15;
+      int distance_turn_end = msg.indexOf("}", distance_turn_start);
+      Setpoint_turn = msg.substring(distance_turn_start, distance_turn_end).toInt();
     }
 
     if (msg.indexOf("speed_left") >= 0) {
@@ -74,7 +80,7 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       pid_distance.SetD(kd);
 
       Serial.printf("Update PID distance: Kp=%.2f, Ki=%.2f, Kd=%.2f\n", kp, ki, kd);
-      webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
+      webSocket.sendTXT(client_num, "New PID received+");
 
       
     }
@@ -90,7 +96,7 @@ void StartWebServer(void)
   Serial.println("Connecté à l'adresse IP : " + WiFi.localIP().toString());
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", index_html);
+    request->send(200, "text/html", getHTML());
   });
   server.begin();
 
@@ -567,7 +573,7 @@ void turnRight(void) // function to turn right
   stopExec(); // stop current execution
 }
 
-void turnLeft(void) // function to turn left
+void turnLeft(void) // function to tur left
 {
   DEBUG_PRINTLN_FCT("exc turnLeft fct");
   DEBUG_PRINTLN_ACT("turn left");
@@ -698,14 +704,32 @@ void forward_web(int comm) // function to drive forwards
   DEBUG_PRINTLN_ACT("drive web");
   value_fix = wheel_balance; //initialisation de la balance
   showBitmap(image_data_EYES_DOWN);
+  Setpoint = Setpoint_run;
 
-  //calculs pour PID
+  //if on ore more motors need to turn in other way
+  if(comm == 2)
+
+  {
+    speedL = speedL_back;
+    speedR = speedR_back;
+  }
+  else if(comm == 3)
+  {
+    Setpoint = Setpoint_turn;
+    speedL = speedL_back;
+  }
+  else if(comm == 4)
+  { 
+    Setpoint = Setpoint_turn;
+    speedR = speedR_back;
+  }
+
+  //timer for PID frequency
   startTimer();
-  last_speedL = default_speedL;
-  last_speedR = default_speedL;
+
 
   while((abs(encoder1_pos) < Setpoint) ||
-        (abs(encoder2_pos) < Setpoint)){
+        (abs(encoder2_pos) < Setpoint) || comm != 5){
     //calcul de la vitesse de l'encodeur (output of the system)
     time_now = millis();
     measurment_time = time_now - last_time_now;
@@ -737,7 +761,7 @@ void forward_web(int comm) // function to drive forwards
       pid_delta.Compute();
     }
 
-    //int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
+    //int speedR = speedR + val_outputR;
     //int speedL = speedL + val_outputL;
     
     //to avoid to strong values
@@ -825,8 +849,8 @@ void forward(void) // function to drive forwards
     last_speedR = default_speedL;
   }
   
-  //int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
-  //int speedL = speedL + val_outputL;
+  int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
+  int speedL = speedL + val_outputL;
   
   double val_output_delta = constrain(delta_fix, -0.25, 0.25);
   delta_fix = val_output_delta; 
@@ -856,7 +880,6 @@ void forward(void) // function to drive forwards
   } else {
     time_now = millis();
     delta_fix = 0;
-    speedR = 
     val_outputR=0;
     val_outputL=0;
     value_fix = wheel_balance;
@@ -1227,7 +1250,6 @@ void readcamera() {
 }
 
 
-
 void setup() // microcontroller setup runs once
 {
   Serial.begin(9600); // setup serial monitor
@@ -1291,6 +1313,116 @@ void setup() // microcontroller setup runs once
     Serial.println(" camera is detect !");
   }
   StartWebServer();
+}
+
+String getHTML()
+{
+  String html = "";
+
+  //partie boutons
+  html += "<!DOCTYPE html>\n";
+  html += "<html>\n";
+  html += "<head>\n";
+  html += "  <meta charset='utf-8'>\n";
+  html += "  <title>Paramètres du robot</title>\n";
+  html += "</head>\n";
+  html += "<body>\n";
+
+  html += "  <h2>Speed Forward</h2>\n";
+  html += "  <label>Speed left: ";
+  html += "<input type='number' id='speed_left' value='" + String(default_speedL) + "'></label><br>\n";
+  html += "  <label>Speed right: ";
+  html += "<input type='number' id='speed_right' value='" + String(default_speedR) + "'></label><br>\n";
+  html += "  <button onclick=\"send_speed()\">Send settings </button>\n";
+
+  html += "  <h2>Distance</h2>\n";
+  html += "  <label>Distance : <input type='number' id='Distance' value='" + String(Setpoint) + "'></label><br>\n";
+  html += "  <button onclick=\"send_distance()\">Send settings </button>\n";
+
+  html += "  <h2>Distance turn</h2>\n";
+  html += "  <label>Distance : <input type='number' id='Distance_turn' value='" + String(Setpoint_turn) + "'></label><br>\n";
+  html += "  <button onclick=\"send_distance_turn()\">Send settings </button>\n";
+
+  html += "  <h2>PID Distance</h2>\n";
+  html += "  <label>Kp: <input type='number' id='kp' value='" + String(kp) + "'></label><br>\n";
+  html += "  <label>Ki: <input type='number' id='ki' value='" + String(ki) + "'></label><br>\n";
+  html += "  <label>Kd: <input type='number' id='kd' value='" + String(kd) + "'></label><br><br>\n";
+  html += "  <button onclick=\"sendPID()\">Send settings </button>\n";
+
+  html += "  <h2>PID Balance</h2>\n";
+  html += "  <label>Kp_wheel: <input type='number' id='kp_wheel' value='" + String(kp_wheel) + "'></label><br>\n";
+  html += "  <label>Ki_wheel: <input type='number' id='ki_wheel' value='" + String(ki_wheel) + "'></label><br>\n";
+  html += "  <label>Kd_wheel: <input type='number' id='kd_wheel' value='" + String(kd_wheel) + "'></label><br><br>\n";
+  html += "  <button onclick=\"sendPID_balance()\">Send settings </button>\n";
+
+  html += "<p id='status'>Statut : En attente...</p>\n";
+  
+  //les touches
+  html += R"rawliteral(<table align="center">
+    <tr>
+      <td></td>
+      <td><button onclick="set_command(1)" id="for">forward</button></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><button onclick="set_command(4)" id="rig">left</button></td>
+      <td><button onclick="set_command(2)" id="back">back</button></td>
+      <td><button onclick="set_command(3)" id="lef">right</button></td>
+    </tr>
+  </table>)rawliteral";
+
+
+  //partie javascript
+  html += R"rawliteral(
+      <script>
+      var ws = new WebSocket("ws://" + location.hostname + ":81/");
+      ws.onmessage = function(event) {
+        document.getElementById("status").innerText = "Response: " + event.data;
+      };
+
+      function send_speed() {
+        var speed_left = parseFloat(document.getElementById("speed_left").value);
+        var speed_right = parseFloat(document.getElementById("speed_right").value);
+        var msg = JSON.stringify({ speed_left: speed_left, speed_right: speed_right });
+        ws.send(msg);
+      }
+
+      function send_distance_turn() {
+        var distance = parseFloat(document.getElementById("Distance_turn").value);
+        var msg = JSON.stringify({distance_turn: distance});
+        ws.send(msg);
+      }
+
+      function send_distance() {
+        var distance = parseFloat(document.getElementById("Distance").value);
+        var msg = JSON.stringify({distance: distance});
+        ws.send(msg);
+      }
+
+      function sendPID() {
+        var kp = parseFloat(document.getElementById("kp").value);
+        var ki = parseFloat(document.getElementById("ki").value);
+        var kd = parseFloat(document.getElementById("kd").value);
+        var msg = JSON.stringify({ kp: kp, ki: ki, kd: kd });
+        ws.send(msg);
+      }
+
+      function sendPID_balance() {
+        var kp = parseFloat(document.getElementById("kp_wheel").value);
+        var ki = parseFloat(document.getElementById("ki_wheel").value);
+        var kd = parseFloat(document.getElementById("kd_wheel").value);
+        var msg = JSON.stringify({ p_wheel: kp, i_wheel: ki, d_wheel: kd });
+        ws.send(msg);
+      }
+
+      function set_command(comm) {
+        var msg = JSON.stringify({command: comm});
+        ws.send(msg);
+      }
+
+    </script>)rawliteral";
+  html += "</body>\n</html>\n";
+  return html;
 }
 
 void loop() // microcontroller loop function 
