@@ -146,7 +146,7 @@ double k_delta = 0.7;
 double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
 double delta_fix = 0;
-double kp_wheel = 0.15, ki_wheel = 0.01, kd_wheel = 0.15;
+double kp_wheel = 0.02, ki_wheel = 0.01, kd_wheel = 0.4;
 double delta_goal = 1;
 double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
 int kspeed = 1;
@@ -184,10 +184,10 @@ int enc_count = 0;
 ESP32MotorControl MotorControl = ESP32MotorControl();
 
 // initial motor speed  
-int default_speedL = 40; // because azobopi floated to right side     
-int default_speedR = 60;
+int default_speedL = 35; // because azobopi floated to right side     
+int default_speedR = 40;
 int speedL_back = 30;
-int speedR_back = 30; 
+int speedR_back = 35; 
 int speedL = default_speedL, speedR = default_speedR;
 
 // motor speed for turning -> set lower fixed speed for turning
