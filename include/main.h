@@ -85,6 +85,7 @@ int objectHeight = 0;
 #define BACK_ST 9
 #define TUNE_ST 10
 #define WAIT_ST 11
+#define WEB_ST 12
 
 // Movement Commands
 #define MAX_NR_COMMANDS 20
@@ -109,7 +110,7 @@ int nr_comm;
 int comm_index;         // the index of the action that is being executed...
 int recorded_button[MAX_NR_COMMANDS];
 int button_index = 0;
-int mov;                // Programed data from buttons
+int mov;                // Programed data from buttons"
 unsigned long button_command_count;  // Nr. of times command button is pressed
 unsigned long button_stop_count = 0; // Nr. of times stop button is pressed
 
@@ -258,8 +259,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
 
-const char* ssid = "Partage_julien";
-const char* password = "poooorus15";
+const char* ssid = "Juju";
+const char* password = "1505juju";
 
 AsyncWebServer server(80);
 WebSocketsServer webSocket(81);

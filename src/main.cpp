@@ -375,7 +375,12 @@ void init(void) // function to init the the robo
   {
     setLed(255,255,255); // set LED to white
     machine_state = TUNE_ST;
-    
+  }
+  
+  if (button_stop_count == 1) //switch to tune state
+  {
+    setLed(255,255,255); // set LED to white
+    machine_state = TUNE_ST;
   }
 
 }
@@ -806,6 +811,7 @@ void forward_web(int comm) // function to drive forwards
   pid_delta.Reset();
   MotorControl.motorsStop(); // stop motors
 }
+
 void forward(void) // function to drive forwards
 {
   DEBUG_PRINTLN_FCT("exc forward fct");
@@ -1209,6 +1215,10 @@ void fsm(void) // finite state machine
     wait(); // execute func
     break;
 
+  case WEB_ST:
+    webSocket.loop();
+    break;
+
   case VOID_ST: // execute void state 
     // put code here
     break;
@@ -1430,6 +1440,5 @@ void loop() // microcontroller loop function
 { 
   DEBUG_PRINTLN_FCT("exc microcontoller loop fct"); // debug print
   fsm(); // execute finite state machine
-  webSocket.loop();
   show_state(); // execute show state fct for debugging
 }
