@@ -146,7 +146,7 @@ double wheel_balance = 1;
 double k_delta = 0.7;
 double computed_speedR, computed_speedL;
 double last_speedL, last_speedR;
-double delta_fix = 0;
+double delta_fix = 20;
 double kp_wheel = 0.02, ki_wheel = 0.01, kd_wheel = 0.4;
 double delta_goal = 1;
 double kp = 0.25, ki =0, kd = 0; // changes in ki & kd resulted in strange behaviour
@@ -164,6 +164,7 @@ float setpoint_values_move[num_setpoint_values_move];
 float setpoint_move_min = -2.00;
 float setpoint_move_max = 2.00;
 int tune_counter_move;
+
 // initial straight run
 float setpoint_straight_run;     // increase to go right 
 
@@ -259,6 +260,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
 
+int robot_in_run = 0;
 const char* ssid = "Juju";
 const char* password = "1505juju";
 

@@ -5,6 +5,21 @@ void readcamera();
 void forward_web(int comm);
 String getHTML();
 
+void StopWebServer(void)
+{
+  // Arrêter le serveur HTTP
+  server.end();
+  Serial.println("Serveur HTTP arrêté.");
+
+  // Fermer la connexion WebSocket
+  webSocket.close();
+  Serial.println("WebSocket fermé.");
+
+  // Optionnel : déconnecter du WiFi
+  WiFi.disconnect();
+  Serial.println("WiFi déconnecté.");
+}
+
 void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
   if (type == WStype_TEXT) {
     String msg = String((char*)payload);
@@ -40,7 +55,14 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       int comm_start = msg.indexOf("command") + 9;
       int comm_end = msg.indexOf("}", comm_start);
       int comm = msg.substring(comm_start, comm_end).toInt();
+      while(robot_in_run);
       forward_web(comm);
+    }
+
+    if (msg.indexOf("delta_fix") >= 0) {
+      int delta_start = msg.indexOf("delta_fix") + 11;
+      int delta_end = msg.indexOf("}", delta_start);
+      delta_fix = msg.substring(delta_start, delta_end).toDouble();
     }
 
     if (msg.indexOf("p_wheel") >= 0) {
@@ -373,16 +395,11 @@ void init(void) // function to init the the robo
 
   if (button_stop_count == 1) //switch to tune state
   {
+    setLed(255, 0, 0);
+    machine_state = WEB_ST;
+    StartWebServer();
     setLed(255,255,255); // set LED to white
-    machine_state = TUNE_ST;
   }
-  
-  if (button_stop_count == 1) //switch to tune state
-  {
-    setLed(255,255,255); // set LED to white
-    machine_state = TUNE_ST;
-  }
-
 }
 
 void readComm(void) // funciton to read movement commands
@@ -435,7 +452,7 @@ void stopExec(void){
   if (button_stop.isPressed()){ // check if stop button is pressed, if yes stop current run of commands and go back to START_EXEC_ST
     MotorControl.motorsStop(); // stop motors
     setLed(255, 0, 0); // set led to red
-
+    
     comm_index = 0; // set comm index to 0 to restart at command 0 on the next run
     
     showBitmap(image_data_DISTRESSED_EYES);
@@ -677,35 +694,35 @@ void act_com(int command, double speed_left, double speed_right)
 {
   if(command == 1)
   {
-    MotorControl.motorReverse(0, speedR);
-    MotorControl.motorReverse(1, speedL);
+    MotorControl.motorReverse(1, speed_right);
+    MotorControl.motorReverse(0, speed_left);
   }
   else if(command == 2)
   {
-    MotorControl.motorForward(0, speedR);
-    MotorControl.motorForward(1, speedL);
+    MotorControl.motorForward(1, speed_right);
+    MotorControl.motorForward(0, speed_left);
   }
   else if(command == 3)
   {
-    MotorControl.motorReverse(0, speedR);
-    MotorControl.motorForward(1, speedL);
+    MotorControl.motorReverse(1, speed_right);
+    MotorControl.motorForward(0, speed_left);
   }
   else if(command == 4)
   {
-    MotorControl.motorForward(0, speedR);
-    MotorControl.motorReverse(1, speedL);
+    MotorControl.motorForward(1, speed_right);
+    MotorControl.motorReverse(0, speed_left);
   }
   else if(command == 5)
   {
-    MotorControl.motorStop(0);
     MotorControl.motorStop(1);
+    MotorControl.motorStop(0);
   }
 }
 
 void forward_web(int comm) // function to drive forwards
 {
+  robot_in_run = 1;
   DEBUG_PRINTLN_ACT("drive web");
-  value_fix = wheel_balance; //initialisation de la balance
   showBitmap(image_data_EYES_DOWN);
   Setpoint = Setpoint_run;
 
@@ -729,78 +746,35 @@ void forward_web(int comm) // function to drive forwards
   //timer for PID frequency
   startTimer();
 
-
-  while((abs(encoder1_pos) < Setpoint) &&
-        (abs(encoder2_pos) < Setpoint)){
+  while((abs(encoder2_pos) < Setpoint)){
     //calcul de la vitesse de l'encodeur (output of the system)
     time_now = millis();
-    measurment_time = time_now - last_time_now;
-    measurment_time = max(measurment_time, 5.0);
-    last_time_now = time_now;     
-
+    
     enc_readL = encoder1_pos;
     enc_readR = encoder2_pos;
-    computed_speedR = (encoder1_pos-enc1_last)/measurment_time;
-    computed_speedL = (encoder2_pos-enc2_last)/measurment_time;
     
-    enc1_last = encoder1_pos;
-    enc2_last = encoder2_pos;
-
-    if (computed_speedL != 0) {
-      delta_wheel = abs(computed_speedR / computed_speedL);
-      if (abs(delta_wheel - 1.0) < 0.02) {
-        delta_fix = 0;
-        pid_delta.Reset();
-      }
-      if (abs(computed_speedL) < 0.01) delta_wheel = 1.0;
-      delta_wheel = constrain(delta_wheel, 0.2, 5.0);
-    } else {
-      delta_wheel = 1; // valeur par défaut ou précédente
-    }
     //compute the PID
     if (counterPID > freq) {
       portENTER_CRITICAL_ISR(&counterMux);
       counterPID = 0;
       portEXIT_CRITICAL_ISR(&counterMux);
       //pidleft.Compute();
-      //pidright.Compute(); 
-      pid_delta.Compute();
+      pidright.Compute(); 
+      //pid_delta.Compute();
     }
-
-    //int speedR = speedR + val_outputR;
-    //int speedL = speedL + val_outputL;
     
-    //to avoid to strong values
-    double val_output_delta = constrain(delta_fix, -0.25, 0.25);
-    delta_fix = val_output_delta;
-
-    //add the fix to the balance
-    value_fix += delta_fix;
-    
-    value_fix = constrain(value_fix, 0.7, 1.3);
-    
-    //compute the new speed with the balance
-    speedR = speedR*value_fix;
-    speedL = speedL/value_fix;
-    
-    //speed can be 255 mx
-    if(speedL>255){speedL=255;}
-    if(speedR>255){speedR=255;}
+    speedR = speedR + val_outputR;
+    speedL = speedR + delta_fix;
     
     //send new speed to the motors
     act_com(comm, speedL, speedR);
     motor_command_count ++;
-
     print_values_for_plot();
   }
+
   time_now = millis();
-  delta_fix = 0;
   val_outputR=0;
   val_outputL=0;
-  value_fix = wheel_balance;
-  last_time_now = 0;
-  enc1_last = 0;
-  enc2_last = 0;
   speedL = default_speedL;
   speedR =  default_speedR;
   encoder1_pos = 0;
@@ -808,8 +782,9 @@ void forward_web(int comm) // function to drive forwards
   motor_command_count = 0;
   stopTimer();
   time_now = millis();
-  pid_delta.Reset();
+  pidright.Reset();
   MotorControl.motorsStop(); // stop motors
+  robot_in_run = 0;
 }
 
 void forward(void) // function to drive forwards
@@ -856,8 +831,8 @@ void forward(void) // function to drive forwards
     last_speedR = default_speedL;
   }
   
-  int speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
-  int speedL = speedL + val_outputL;
+  speedR = speedR + val_outputR; // setpoint_straight_run -> make sure robo goes straight
+  speedL = speedL + val_outputL;
   
   double val_output_delta = constrain(delta_fix, -0.25, 0.25);
   delta_fix = val_output_delta; 
@@ -1124,10 +1099,13 @@ if (button_stop_count == 2) //switch to INIT state
   {
     machine_state = INIT_ST;
     button_stop_count = 0; // reset button stop counter
+    StopWebServer();
     button_stop.resetCount(); // reset button stop
     pixels.setBrightness(255); // reset brightness of LED after tune state 
   }
 }
+
+
 
 void stop(void) // function that is called between movements
 {
@@ -1207,7 +1185,7 @@ void fsm(void) // finite state machine
 
   case TUNE_ST: // execute tune state 
     last_machine_state = machine_state; // set last machine state
-    tune(); // tune funct
+    tune(); // tune funct   
     break;
 
   case WAIT_ST: // execute tune state 
@@ -1216,6 +1194,7 @@ void fsm(void) // finite state machine
     break;
 
   case WEB_ST:
+    last_machine_state = machine_state; 
     webSocket.loop();
     break;
 
@@ -1323,7 +1302,6 @@ void setup() // microcontroller setup runs once
   } else {
     Serial.println(" camera is detect !");
   }
-  StartWebServer();
 }
 
 String getHTML()
@@ -1345,6 +1323,11 @@ String getHTML()
   html += "  <label>Speed right: ";
   html += "<input type='number' id='speed_right' value='" + String(default_speedR) + "'></label><br>\n";
   html += "  <button onclick=\"send_speed()\">Send settings </button>\n";
+
+  html += "  <h2>Delta fix</h2>\n";
+  html += "  <label>Delta fix: ";
+  html += "<input type='number' id='delta_fix' value='" + String(delta_fix) + "'></label><br>\n";
+  html += "  <button onclick=\"send_delta_fix()\">Send settings </button>\n";
 
   html += "  <h2>Distance</h2>\n";
   html += "  <label>Distance : <input type='number' id='Distance' value='" + String(Setpoint) + "'></label><br>\n";
@@ -1398,6 +1381,12 @@ String getHTML()
         ws.send(msg);
       }
 
+      function send_delta_fix() {
+        var delta_fix = parseFloat(document.getElementById("delta_fix").value);
+        var msg = JSON.stringify({ delta_fix: delta_fix});
+        ws.send(msg);
+      }
+
       function send_distance_turn() {
         var distance = parseFloat(document.getElementById("Distance_turn").value);
         var msg = JSON.stringify({distance_turn: distance});
@@ -1440,5 +1429,5 @@ void loop() // microcontroller loop function
 { 
   DEBUG_PRINTLN_FCT("exc microcontoller loop fct"); // debug print
   fsm(); // execute finite state machine
-  show_state(); // execute show state fct for debugging
+  //show_state(); // execute show state fct for debugging
 }
