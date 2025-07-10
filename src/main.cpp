@@ -5,6 +5,36 @@ void readcamera();
 void forward_web(int comm);
 String getHTML();
 
+void print_values_for_plot()
+{
+    Serial.print(">encoder2_pos:");
+    Serial.print(encoder2_pos);
+    Serial.print(",encoder1_pos:");
+    Serial.print(encoder1_pos);
+    Serial.print(",computed_speedL:");
+    Serial.print(computed_speedL);
+    Serial.print(",computed_speedR:");
+    Serial.print(computed_speedR);
+    Serial.print(",delta_wheel:");
+    Serial.print(delta_wheel);
+    Serial.print(",speedL:");
+    Serial.print(speedL);
+    Serial.print(",speedR:");
+    Serial.print(speedR);
+    Serial.print(",delta_fix:");
+    Serial.print(delta_fix);
+    Serial.print(",wheel_balance:");
+    Serial.print(wheel_balance);
+    Serial.print(",Kp:");
+    //Serial.print(pid_delta.GetP());
+    //Serial.print(",Ki:");
+    //Serial.print(pid_delta.GetI());
+    //Serial.print(",Kd:");
+    //Serial.print(pid_delta.GetD());
+    Serial.print(",value_fix:");
+    Serial.println(value_fix);
+}
+
 void StopWebServer(void)
 {
   // Arrêter le serveur HTTP
@@ -23,8 +53,7 @@ void StopWebServer(void)
 void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length) {
   if (type == WStype_TEXT) {
     String msg = String((char*)payload);
-    Serial.println("Message reçu : " + msg);
-
+    DEBEUG_PRINTLN_WEB("Message reçu : " + msg);
     if (msg.indexOf("distance") >= 0) {
       int distance_start = msg.indexOf("distance") + 10;
       int distance_end = msg.indexOf("}", distance_start);
@@ -77,9 +106,9 @@ void handleWebSocket(uint8_t client_num, WStype_t type, uint8_t * payload, size_
       ki_wheel = msg.substring(ki_start, ki_end).toDouble();
       kd_wheel = msg.substring(kd_start, kd_end).toDouble();
 
-      pid_delta.SetP(kp_wheel);
-      pid_delta.SetI(ki_wheel);
-      pid_delta.SetD(kd_wheel);
+      //pid_delta.SetP(kp_wheel);
+      //pid_delta.SetI(ki_wheel);
+      //pid_delta.SetD(kd_wheel);
 
       Serial.printf("update PID balance: Kp=%.4f, Ki=%.4f, Kd=%.4f\n", kp_wheel, ki_wheel, kd_wheel);
       webSocket.sendTXT(client_num, "Nouveaux PID reçus.");
@@ -171,6 +200,7 @@ void IRAM_ATTR onTimer()
 {
   portENTER_CRITICAL_ISR(&timerMux);
   counterPID++;
+  counter_plot++;
   portEXIT_CRITICAL_ISR(&timerMux);
 }
 
@@ -204,35 +234,7 @@ void tuningSetupTurn()
   SETPOINT_TURN = setpoint_values_turn[tune_counter_turn];
 }
 
-void print_values_for_plot()
-{
-    Serial.print(">encoder2_pos:");
-    Serial.print(encoder2_pos);
-    Serial.print(",encoder1_pos:");
-    Serial.print(encoder1_pos);
-    Serial.print(",computed_speedL:");
-    Serial.print(computed_speedL);
-    Serial.print(",computed_speedR:");
-    Serial.print(computed_speedR);
-    Serial.print(",delta_wheel:");
-    Serial.print(delta_wheel);
-    Serial.print(",speedL:");
-    Serial.print(speedL);
-    Serial.print(",speedR:");
-    Serial.print(speedR);
-    Serial.print(",delta_fix:");
-    Serial.print(delta_fix);
-    Serial.print(",wheel_balance:");
-    Serial.print(wheel_balance);
-    Serial.print(",Kp:");
-    Serial.print(pid_delta.GetP());
-    Serial.print(",Ki:");
-    Serial.print(pid_delta.GetI());
-    Serial.print(",Kd:");
-    Serial.print(pid_delta.GetD());
-    Serial.print(",value_fix:");
-    Serial.println(value_fix);
-}
+
 
 void tuningSetupMove()
 {
@@ -533,7 +535,7 @@ void turnRight(void) // function to turn right
       portEXIT_CRITICAL_ISR(&counterMux);
       //pidleft.Compute();
       //pidright.Compute(); 
-      pid_delta.Compute();
+      //pid_delta.Compute();
     }
   }
   else{
@@ -571,7 +573,6 @@ void turnRight(void) // function to turn right
     //Serial.println(ver);
   } else {
     time_now = millis();
-    delta_fix = 0;
     speedR = 
     val_outputR=0;
     val_outputL=0;
@@ -588,7 +589,7 @@ void turnRight(void) // function to turn right
     machine_state   = STOP_ST;
     stopTimer();
     time_now = millis();
-    pid_delta.Reset();
+    //pid_delta.Reset();
   }
   stopExec(); // stop current execution
 }
@@ -628,7 +629,7 @@ void turnLeft(void) // function to tur left
       portEXIT_CRITICAL_ISR(&counterMux);
       //pidleft.Compute();
       //pidright.Compute(); 
-      pid_delta.Compute();
+     // pid_delta.Compute();
     }
   }
   else{
@@ -685,7 +686,7 @@ void turnLeft(void) // function to tur left
     machine_state   = STOP_ST;
     stopTimer();
     time_now = millis();
-    pid_delta.Reset();
+    //pid_delta.Reset();
   }
   stopExec(); // stop current execution
 }
@@ -745,14 +746,12 @@ void forward_web(int comm) // function to drive forwards
 
   //timer for PID frequency
   startTimer();
-
+  encoder1_pos = 0;
+  encoder2_pos = 0;
   while((abs(encoder2_pos) < Setpoint)){
-    //calcul de la vitesse de l'encodeur (output of the system)
-    time_now = millis();
-    
+    print_values_for_plot();
     enc_readL = encoder1_pos;
     enc_readR = encoder2_pos;
-    
     //compute the PID
     if (counterPID > freq) {
       portENTER_CRITICAL_ISR(&counterMux);
@@ -762,29 +761,33 @@ void forward_web(int comm) // function to drive forwards
       pidright.Compute(); 
       //pid_delta.Compute();
     }
-    
+
+    //compute ne speeds with PID correction
     speedR = speedR + val_outputR;
     speedL = speedR + delta_fix;
     
     //send new speed to the motors
     act_com(comm, speedL, speedR);
-    motor_command_count ++;
-    print_values_for_plot();
-  }
 
+    //if(counter_plot > 20000/plot_frequency)//20000 is timer frequency
+    //{
+    //  portENTER_CRITICAL_ISR(&counterMux);
+    //  counter_plot = 0;
+    //  portEXIT_CRITICAL_ISR(&counterMux);
+    //}
+  }
+  print_values_for_plot();
+  MotorControl.motorsStop(); // stop motors
   time_now = millis();
   val_outputR=0;
   val_outputL=0;
   speedL = default_speedL;
   speedR =  default_speedR;
-  encoder1_pos = 0;
-  encoder2_pos = 0;
   motor_command_count = 0;
   stopTimer();
-  time_now = millis();
   pidright.Reset();
-  MotorControl.motorsStop(); // stop motors
   robot_in_run = 0;
+  DEBUG_PRINTLN_ACT("Robot stopped properly");
 }
 
 void forward(void) // function to drive forwards
@@ -823,7 +826,7 @@ void forward(void) // function to drive forwards
       portEXIT_CRITICAL_ISR(&counterMux);
       //pidleft.Compute();
       //pidright.Compute(); 
-      pid_delta.Compute();
+      //pid_delta.Compute();
     }
   }
   else{
@@ -877,7 +880,7 @@ void forward(void) // function to drive forwards
     machine_state   = STOP_ST;
     stopTimer();
     time_now = millis();
-    pid_delta.Reset();
+    //pid_delta.Reset();
   }
   stopExec(); // stop current execution
 }
@@ -917,7 +920,7 @@ void back(void) // function to drive backwards
       portEXIT_CRITICAL_ISR(&counterMux);
       //pidleft.Compute();
       //pidright.Compute(); 
-      pid_delta.Compute();
+      //pid_delta.Compute();
     }
   }
   else{
@@ -972,7 +975,7 @@ void back(void) // function to drive backwards
     machine_state   = STOP_ST;
     stopTimer();
     time_now = millis();
-    pid_delta.Reset();
+    //pid_delta.Reset();
   }
   stopExec(); // stop current execution
 }

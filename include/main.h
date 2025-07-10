@@ -6,6 +6,7 @@
 #define DEBUG_ACT
 //#define DEBUG_FCT
 #define DEBUG_STATE
+#define DEBUG_WEB
 
 #ifdef DEBUG_VAR
   #define DEBUG_PRINT_VAR(x) Serial.print(x)
@@ -13,6 +14,14 @@
 #else
   #define DEBUG_PRINTLN_VAR(x)
   #define DEBUG_PRINT_VAR(x) 
+#endif
+
+#ifdef DEBUG_WEB
+  #define DEBEUG_PRINT_WEB(x) Serial.print(x)
+  #define DEBEUG_PRINTLN_WEB(x) Serial.println(x)
+#else
+  #define DEBEUG_PRINT_WEB(x)
+  #define DEBEUG_PRINT_WEB(x)
 #endif
 
 #ifdef DEBUG_ACT
@@ -156,7 +165,8 @@ int freq = 100;
 int motor_command_count = 0;
 double value_fix = wheel_balance;
 
-
+int plot_frequency = 20; //hz (20 plot per seconds)
+int counter_plot = 0;
 
 // tune forward/backward movement regarding differences in motors
 #define num_setpoint_values_move 7 // number of possible tuning setpoints in equivalent distances
@@ -225,7 +235,7 @@ portMUX_TYPE counterMux = portMUX_INITIALIZER_UNLOCKED;
 // Initialize PID control for each motor
 PID pidleft(&Setpoint, &enc_readL, &val_outputL, kp, ki, kd);
 PID pidright(&Setpoint, &enc_readR, &val_outputR, kp, ki, kd);
-PID pid_delta(&delta_goal, &delta_wheel, &delta_fix, kp_wheel, ki_wheel, kd_wheel);
+//PID pid_delta(&delta_goal, &delta_wheel, &delta_fix, kp_wheel, ki_wheel, kd_wheel);
 PID pid_distance(&Setpoint, &input_distance, &output_distance, kp, ki, kd);
 // OLED DISPLAY SSD1306
 
